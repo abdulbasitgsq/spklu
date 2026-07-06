@@ -1,7 +1,7 @@
-# Spec: Poligon Mismatch Spasial Organik (Organic Spatial Mismatch Polygons)
+# Spec: Heatmap Mismatch Grid Sel (Spatial Analysis Grid Overlay)
 
 ## Objective
-Mengganti bentuk visual poligon perencanaan yang sebelumnya berupa kotak kecil kaku menjadi bentuk poligon meliuk alami (organik) skala kota berukuran besar (radius 3-5 kilometer) untuk memetakan suplai dan celah pasar secara realistis sesuai contoh referensi.
+Mengubah visualisasi perencanaan peta dari poligon tunggal menjadi Grid Sel Spasial 2D (Spatial Grid Overlay) yang padat dengan sel-sel persegi transparan berwarna biru (suplai) dan merah gradasi (celah pasar) beserta tooltip melayang berisi metrik analitis (Grid ID, POIs, Supply, Gap Score) saat disorot mouse.
 
 ## Business Types
 - Tipe bisnis: General / EV Charging Locator & Planner.
@@ -11,11 +11,12 @@ Mengganti bentuk visual poligon perencanaan yang sebelumnya berupa kotak kecil k
 
 ## UI Changes
 - **Peta Interaktif (`src/components/ChargerMap.jsx`)**:
-  - Implementasi fungsi proyeksi `generateOrganicPolygon` dengan noise matematika untuk menggambar bentuk poligon alami yang melingkari pusat stasiun wilayah terpilih.
-  - Membesarkan skala poligon suplai menjadi radius 3,2 km dan celah gap menjadi radius 4,8 km dengan pergeseran offset agar bertumpuk secara realistis.
+  - Implementasi grid 2D menggunakan Leaflet `L.rectangle`.
+  - Penambahan popup tooltip melayang (`L.tooltip` dengan opsi `sticky: true`) untuk menampilkan metrik analitis.
 
 ## Data Flow
-- ChargerMap menghitung rata-rata lat/lng wilayah aktif, men-generate poligon organik bersisi 12 berdasarkan skala jarak meter, dan merendernya ke peta.
+- ChargerMap membagi bounding box wilayah stasiun aktif menjadi $20 \times 20$ sel, menentukan status sel secara deterministik, dan merendernya dengan tooltip interaktif.
 
 ## Success Criteria
-- [ ] Poligon suplai (Biru) dan celah gap (Merah) di peta berbentuk meliuk alami (organik) dan berukuran besar menutupi area metropolitan/kota.
+- [ ] Tampil grid sel berwarna biru dan merah pada peta saat perencanaan diaktifkan.
+- [ ] Tooltip muncul melayang mengikuti kursor mouse saat menyorot sel, menampilkan Grid ID, POIs, Supply, dan Gap Score yang tepat.

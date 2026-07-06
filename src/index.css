@@ -2063,3 +2063,20 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 3px;
   background: linear-gradient(to right, #fee2e2, #fca5a5, #f87171, #ef4444, #dc2626);
 }
+
+/* Grid Cell Hover Tooltip (Spatial Analysis) */
+.grid-cell-tooltip {
+  background: rgba(255, 255, 255, 0.97) !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 11px !important;
+  color: #222 !important;
+  pointer-events: none;
+}
+
+.grid-cell-tooltip::before {
+  display: none !important;
+}
