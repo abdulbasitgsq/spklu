@@ -13,7 +13,7 @@ export default function Header({ searchVal, onSearchChange }) {
         <input 
           type="text" 
           className="search-input" 
-          placeholder="Cari kota (Jakarta, Bandung, Bali)..." 
+          placeholder="Cari nama SPKLU..." 
           value={searchVal}
           onChange={(e) => onSearchChange(e.target.value)}
         />

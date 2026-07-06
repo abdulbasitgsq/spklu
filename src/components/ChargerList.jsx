@@ -156,7 +156,7 @@ export default function ChargerList({
                 <div className="card-address">{charger.address}</div>
 
                 <div className="card-specs">
-                  {charger.connectors.map((conn, idx) => getPowerTypePill(conn.power, idx))}
+                  {Array.from(new Set(charger.connectors.map((c) => c.power))).map((power, idx) => getPowerTypePill(power, idx))}
                 </div>
 
                 <div className="card-footer">

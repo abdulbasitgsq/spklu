@@ -1,7 +1,7 @@
-# Spec: Panel Filter Terpadu (Provinsi, Kota, Provider, & Kecepatan)
+# Spec: Searchable Filters, De-duplicated Connector Pills & Card Address Limits
 
 ## Objective
-Menyediakan mekanisme filtering spasial dan operasional tingkat lanjut (Provinsi, Kota/Kabupaten, Provider/Operator, dan Kecepatan Charger) untuk menyaring 4.707 stasiun pengisian daya EV secara kumulatif. Hal ini memudahkan pencarian stasiun pengisian secara presisi serta mengoptimalkan performa rendering list dan peta.
+Meningkatkan kemudahan pencarian stasiun dengan membuat input filter dropdown Provinsi dan Operator menjadi searchable dropdown kustom, menyederhanakan data spesifikasi konektor di kartu agar unik, memotong alamat stasiun yang panjang ke maksimal 2 baris, dan memperbarui placeholder pencarian di header.
 
 ## Business Types
 - Tipe bisnis: General / EV Charging Locator.
@@ -10,22 +10,23 @@ Menyediakan mekanisme filtering spasial dan operasional tingkat lanjut (Provinsi
 - Tidak ada.
 
 ## UI Changes
-- **Filter Bar (`src/components/FilterBar.jsx` & `src/index.css`)**:
-  - Menambahkan empat dropdown select HTML di sebelah kiri filter kategori:
-    1. "Semua Provinsi"
-    2. "Semua Kota/Kab" (tergantung pada Provinsi terpilih)
-    3. "Semua Operator" (PLN, Shell, Voltron, Starvo, Hyundai, dll.)
-    4. "Semua Kecepatan" (Standard, Medium, Fast, Ultrafast)
-  - Desain dropdown menggunakan select minimalis dengan background putih, border bulat tipis, dan custom arrow SVG.
-  - Sederhanakan list filter kategori (menghapus filter operator statis lama karena telah digantikan oleh dropdown operator dinamis).
+- **Header (`src/components/Header.jsx`)**:
+  - Placeholder input pencarian diganti menjadi "Cari nama SPKLU...".
+- **Filter Bar (`src/components/FilterBar.jsx`)**:
+  - Dropdown Provinsi dan Operator diganti dari elemen `<select>` bawaan menjadi komponen `<SearchableSelect>` kustom.
+- **Searchable Select Component (`src/components/SearchableSelect.jsx`) [NEW]**:
+  - Menu dropdown kustom dengan input teks internal yang menyaring opsi pilihan saat diketik, dengan penutupan otomatis saat klik di luar area (*click outside*).
+- **Charger List Card (`src/components/ChargerList.jsx`)**:
+  - Tampilan colokan daya stasiun di-deduplikasi sehingga tidak menampilkan label yang sama berulang kali di satu kartu stasiun.
+- **Card Styling (`src/index.css`)**:
+  - Membatasi alamat `.card-address` maksimal 2 baris menggunakan flexbox clamp.
+  - Menambahkan styling menu dropdown kustom untuk `.searchable-select` dan `.searchable-select-menu`.
 
 ## Data Flow
-- `App.jsx` mengelola state: `selectedProvinsi`, `selectedKabupaten`, `selectedProvider`, `selectedSpeed`.
-- Mengompilasi list unik Provinsi, Kota/Kabupaten, dan Operator dari data static.
-- Menerapkan filter kumulatif pada dataset sebelum diteruskan ke visualizer list (max 50) dan map (max 200).
+- `SearchableSelect` mendengarkan perubahan string pencarian lokal dan memfilter daftar array opsi sebelum merendernya. Mengklik opsi memanggil `onChange` dengan nilai opsi terpilih.
 
 ## Success Criteria
-- [ ] Keempat dropdown selektor termuat secara alfabetis di filter bar.
-- [ ] Dropdown Kota/Kabupaten hanya aktif dan menampilkan kota-kota dalam Provinsi yang dipilih.
-- [ ] Pemilihan filter pada salah satu dropdown menyaring list & peta seketika.
-- [ ] Menghapus filter (kembali ke "Semua") memulihkan pemuatan data nasional dengan lancar.
+- [ ] Placeholder pencarian atas tertulis "Cari nama SPKLU...".
+- [ ] Dropdown Provinsi dan Operator dapat diklik dan diketik untuk mencari nama provinsi/operator secara instan.
+- [ ] Kartu stasiun hanya menampilkan satu badge/pill untuk setiap spesifikasi daya konektor unik (tidak ada duplikat).
+- [ ] Alamat stasiun yang panjang pada list samping kiri terpotong rapi maksimal 2 baris.

@@ -1,4 +1,5 @@
 import React from 'react';
+import SearchableSelect from './SearchableSelect';
 
 export default function FilterBar({ 
   selectedProvinsi,
@@ -17,19 +18,16 @@ export default function FilterBar({
   return (
     <div className="filter-bar">
       <div className="filter-select-group">
-        {/* Provinsi */}
-        <select
-          className="filter-select"
+        {/* Provinsi (Searchable Dropdown) */}
+        <SearchableSelect
+          options={provinces}
           value={selectedProvinsi}
-          onChange={(e) => onProvinsiChange(e.target.value)}
-        >
-          <option value="">Semua Provinsi</option>
-          {provinces.map((prov) => (
-            <option key={prov} value={prov}>{prov}</option>
-          ))}
-        </select>
+          onChange={onProvinsiChange}
+          placeholder="Semua Provinsi"
+          emptyMessage="Provinsi tidak ditemukan"
+        />
 
-        {/* Kabupaten/Kota */}
+        {/* Kabupaten/Kota (Standard Dropdown, dependent on Provinsi) */}
         <select
           className="filter-select"
           value={selectedKabupaten}
@@ -42,19 +40,16 @@ export default function FilterBar({
           ))}
         </select>
 
-        {/* Operator / Provider */}
-        <select
-          className="filter-select"
+        {/* Operator / Provider (Searchable Dropdown) */}
+        <SearchableSelect
+          options={providers}
           value={selectedProvider}
-          onChange={(e) => onProviderChange(e.target.value)}
-        >
-          <option value="">Semua Operator</option>
-          {providers.map((p) => (
-            <option key={p} value={p}>{p}</option>
-          ))}
-        </select>
+          onChange={onProviderChange}
+          placeholder="Semua Operator"
+          emptyMessage="Operator tidak ditemukan"
+        />
 
-        {/* Kecepatan Charger */}
+        {/* Kecepatan Charger (Standard Dropdown) */}
         <select
           className="filter-select"
           value={selectedSpeed}
