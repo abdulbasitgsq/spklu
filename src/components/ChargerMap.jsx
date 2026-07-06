@@ -1,34 +1,26 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { whitespacePoints, spbuLocations, plnLocations, spatialMismatchData } from '../data/planningData';
+import { whitespacePoints, spbuLocations, plnLocations } from '../data/planningData';
 
 // Helper: Generate dynamic mock supply & gap polygons centered around active coordinates
-const generateMockSpatialMismatch = (lat, lng, activeHeatmap) => {
-  const supply = [
-    [lat + 0.015, lng - 0.015],
-    [lat + 0.015, lng + 0.015],
-    [lat - 0.015, lng + 0.015],
-    [lat - 0.015, lng - 0.015]
-  ];
-
-  const gap = [
-    [lat - 0.005, lng - 0.025],
-    [lat - 0.005, lng + 0.025],
-    [lat - 0.045, lng + 0.025],
-    [lat - 0.045, lng - 0.025]
-  ];
-
-  let speedLabel = "";
-  let speedKw = "";
-  if (activeHeatmap === 'slow') { speedLabel = "Slow AC Gap"; speedKw = "7.4 kW"; }
-  else if (activeHeatmap === 'medium') { speedLabel = "Destination Whitespaces"; speedKw = "22 kW"; }
-  else if (activeHeatmap === 'fast') { speedLabel = "Transit Whitespaces"; speedKw = "50 kW"; }
-  else if (activeHeatmap === 'highspeed') { speedLabel = "Highway Transit Whitespaces"; speedKw = "120+ kW"; }
-
-  const desc = `${speedLabel} (${speedKw}): Kawasan ini terdeteksi memiliki gap kapasitas pengisian daya EV ${speedKw} yang belum terpenuhi.`;
-
-  return { supply, gap, desc };
+const generateOrganicPolygon = (lat, lng, radiusMeters, numPoints = 12, seed = 1) => {
+  const points = [];
+  const angleStep = (Math.PI * 2) / numPoints;
+  
+  for (let i = 0; i < numPoints; i++) {
+    const angle = i * angleStep;
+    // Deterministic organic look using sin wave combinations to create naturally winding borders
+    const noise = 0.85 + 0.25 * Math.sin(angle * 3 + seed) + 0.12 * Math.cos(angle * 5 - seed);
+    const dist = radiusMeters * noise;
+    
+    const latOffset = (dist * Math.sin(angle)) / 111320;
+    const lngOffset = (dist * Math.cos(angle)) / (40075000 * Math.cos(lat * Math.PI / 180) / 360);
+    points.push([lat + latOffset, lng + lngOffset]);
+  }
+  // Close the polygon
+  points.push(points[0]);
+  return points;
 };
 
 export default function ChargerMap({ 
@@ -194,86 +186,87 @@ export default function ChargerMap({
 
     // 1. Render Polygons for Spatial Mismatch (Supply & Gaps)
     if (activeHeatmap) {
-      let mismatch = null;
+      // Find current charger coordinates center
+      const avgLat = chargers.length > 0 ? chargers.reduce((sum, c) => sum + c.lat, 0) / chargers.length : -6.20;
+      const avgLng = chargers.length > 0 ? chargers.reduce((sum, c) => sum + c.lng, 0) / chargers.length : 106.82;
 
-      // Check if we have pre-defined data for this province
-      const provData = spatialMismatchData[activeProv];
-      if (provData && provData[activeHeatmap]) {
-        mismatch = provData[activeHeatmap];
-      } else {
-        // Fallback: generate dynamic mock polygons centered on current active chargers view
-        const avgLat = chargers.length > 0 ? chargers.reduce((sum, c) => sum + c.lat, 0) / chargers.length : -6.20;
-        const avgLng = chargers.length > 0 ? chargers.reduce((sum, c) => sum + c.lng, 0) / chargers.length : 106.82;
-        mismatch = generateMockSpatialMismatch(avgLat, avgLng, activeHeatmap);
-      }
+      // Draw Supply Area Polygon (Blue, centered around active stasiun cluster, size ~3.5km)
+      const supplyCoords = generateOrganicPolygon(avgLat, avgLng, 3200, 12, 1);
+      const supplyPoly = L.polygon(supplyCoords, {
+        color: '#2563eb',
+        fillColor: '#3b82f6',
+        fillOpacity: 0.22,
+        weight: 2,
+        dashArray: '5, 8'
+      })
+      .addTo(map)
+      .bindPopup(`
+        <div class="whitespace-popup" style="font-family:'Outfit',sans-serif;">
+          <h4 style="margin: 0 0 4px 0; color: #2563eb; font-weight: 700; font-size:13px;">🔵 Existing Supply Area</h4>
+          <p style="margin: 0; font-size:11px; color:#555;">Kawasan dengan ketersediaan jaringan suplai pengisian daya EV aktif.</p>
+        </div>
+      `);
+      planningLayersRef.current.push(supplyPoly);
 
-      if (mismatch) {
-        // A. Existing Supply Polygon (Blue)
-        const supplyPoly = L.polygon(mismatch.supply, {
-          color: '#2563eb',
-          fillColor: '#3b82f6',
-          fillOpacity: 0.25,
-          weight: 2,
-          dashArray: '4, 6'
-        })
-        .addTo(map)
-        .bindPopup(`
-          <div class="whitespace-popup" style="font-family:'Outfit',sans-serif;">
-            <h4 style="margin: 0 0 4px 0; color: #2563eb; font-weight: 700; font-size:13px;">🔵 Existing Supply Area</h4>
-            <p style="margin: 0; font-size:11px; color:#555;">Kawasan dengan ketersediaan jaringan suplai pengisian daya EV aktif.</p>
-          </div>
-        `);
-        planningLayersRef.current.push(supplyPoly);
+      // Draw Demand Gap Area Polygon (Red, slightly offset to south-east for overlapping mismatch layout, size ~4.8km)
+      const gapCoords = generateOrganicPolygon(avgLat - 0.012, avgLng + 0.012, 4800, 14, 2);
+      
+      let speedLabel = "";
+      let speedKw = "";
+      if (activeHeatmap === 'slow') { speedLabel = "Slow AC Gap"; speedKw = "7.4 kW"; }
+      else if (activeHeatmap === 'medium') { speedLabel = "Destination Whitespaces"; speedKw = "22 kW"; }
+      else if (activeHeatmap === 'fast') { speedLabel = "Transit Whitespaces"; speedKw = "50 kW"; }
+      else if (activeHeatmap === 'highspeed') { speedLabel = "Highway Transit Whitespaces"; speedKw = "120+ kW"; }
 
-        // B. Demand Gap Area Polygon (Red)
-        const gapPoly = L.polygon(mismatch.gap, {
-          color: '#dc2626',
-          fillColor: '#ef4444',
-          fillOpacity: 0.35,
-          weight: 2
-        })
-        .addTo(map)
-        .bindPopup(`
-          <div class="whitespace-popup" style="font-family:'Outfit',sans-serif; width:200px;">
-            <h4 style="margin: 0 0 4px 0; color: #dc2626; font-weight: 700; font-size:13px;">🔴 Demand Gap Area</h4>
-            <p style="margin: 0 0 4px 0; font-weight:700; font-size:11px; color:#333;">${mismatch.desc.split(':')[0]}</p>
-            <p style="margin: 0; font-size:11px; color:#555;">${mismatch.desc.split(':')[1] || mismatch.desc}</p>
-            <p style="font-size:9px;color:#888;margin:6px 0 0 0;border-top:1px solid #eee;padding-top:4px;text-align:center;">Klik area untuk analisis kesesuaian.</p>
-          </div>
-        `);
+      const desc = `${speedLabel} (${speedKw}): Kawasan ini terdeteksi memiliki gap kapasitas pengisian daya EV ${speedKw} yang belum terpenuhi secara memadai.`;
 
-        // Hook up scoring sidebar on click
-        gapPoly.on('click', () => {
-          const foundPt = whitespacePoints.find(p => p.category === activeHeatmap && p.provinsi === activeProv) 
-                          || whitespacePoints.find(p => p.category === activeHeatmap);
-          if (foundPt) {
-            onSelectWhitespace(foundPt);
-          } else {
-            // Generate temporary mock suitability object if no static whitespacePoint matches
-            const mockPoint = {
-              id: "mock-ws",
-              name: mismatch.desc.split(':')[0],
-              city: activeProv,
-              provinsi: activeProv,
-              lat: mismatch.gap[0][0],
-              lng: mismatch.gap[0][1],
-              category: activeHeatmap,
-              scores: {
-                plnGrid: 8.5,
-                traffic: 8.8,
-                poiDensity: 8.0,
-                competition: 9.0,
-                overall: 86,
-                recommendation: "LAYAK",
-                description: mismatch.desc
-              }
-            };
-            onSelectWhitespace(mockPoint);
-          }
-        });
+      const gapPoly = L.polygon(gapCoords, {
+        color: '#dc2626',
+        fillColor: '#ef4444',
+        fillOpacity: 0.30,
+        weight: 2
+      })
+      .addTo(map)
+      .bindPopup(`
+        <div class="whitespace-popup" style="font-family:'Outfit',sans-serif; width:220px;">
+          <h4 style="margin: 0 0 4px 0; color: #dc2626; font-weight: 700; font-size:13px;">🔴 Demand Gap Area</h4>
+          <p style="margin: 0 0 4px 0; font-weight:700; font-size:11px; color:#333;">${speedLabel} (${speedKw})</p>
+          <p style="margin: 0; font-size:11px; color:#555;">Celah ketimpangan spasial antara tingginya permintaan regional dengan minimnya pasokan charging.</p>
+          <p style="font-size:9px;color:#888;margin:6px 0 0 0;border-top:1px solid #eee;padding-top:4px;text-align:center;">Klik area untuk analisis kesesuaian.</p>
+        </div>
+      `);
 
-        planningLayersRef.current.push(gapPoly);
-      }
+      // Hook up scoring sidebar on click
+      gapPoly.on('click', () => {
+        const foundPt = whitespacePoints.find(p => p.category === activeHeatmap && p.provinsi === activeProv) 
+                        || whitespacePoints.find(p => p.category === activeHeatmap);
+        if (foundPt) {
+          onSelectWhitespace(foundPt);
+        } else {
+          // Generate temporary mock suitability object if no static whitespacePoint matches
+          const mockPoint = {
+            id: "mock-ws",
+            name: `${speedLabel} Gap`,
+            city: activeProv,
+            provinsi: activeProv,
+            lat: gapCoords[0][0],
+            lng: gapCoords[0][1],
+            category: activeHeatmap,
+            scores: {
+              plnGrid: 8.5,
+              traffic: 8.8,
+              poiDensity: 8.0,
+              competition: 9.0,
+              overall: 86,
+              recommendation: "LAYAK",
+              description: desc
+            }
+          };
+          onSelectWhitespace(mockPoint);
+        }
+      });
+      
+      planningLayersRef.current.push(gapPoly);
     }
 
     // 2. Render SPBU POIs if checked (Filtered by Province)

@@ -1,7 +1,7 @@
-# Spec: Poligon Whitespace Otomatis untuk Semua Provinsi (Dynamic Spatial Mismatch Fallback)
+# Spec: Poligon Mismatch Spasial Organik (Organic Spatial Mismatch Polygons)
 
 ## Objective
-Mengatasi masalah hilangnya visualisasi heatmap poligon whitespace saat memfilter provinsi yang belum memiliki koordinat perencanaan statis (seperti Lampung). Hal ini dicapai dengan men-generate poligon tiruan secara dinamis di sekitar koordinat rata-rata stasiun pada wilayah terpilih.
+Mengganti bentuk visual poligon perencanaan yang sebelumnya berupa kotak kecil kaku menjadi bentuk poligon meliuk alami (organik) skala kota berukuran besar (radius 3-5 kilometer) untuk memetakan suplai dan celah pasar secara realistis sesuai contoh referensi.
 
 ## Business Types
 - Tipe bisnis: General / EV Charging Locator & Planner.
@@ -11,11 +11,11 @@ Mengatasi masalah hilangnya visualisasi heatmap poligon whitespace saat memfilte
 
 ## UI Changes
 - **Peta Interaktif (`src/components/ChargerMap.jsx`)**:
-  - Menambahkan fungsi pembangun poligon dinamis `generateMockSpatialMismatch` berpusat di koordinat stasiun yang aktif.
-  - Menjadikan poligon dinamis ini sebagai fallback utama jika data statis di `planningData.js` tidak tersedia untuk wilayah yang dipilih.
+  - Implementasi fungsi proyeksi `generateOrganicPolygon` dengan noise matematika untuk menggambar bentuk poligon alami yang melingkari pusat stasiun wilayah terpilih.
+  - Membesarkan skala poligon suplai menjadi radius 3,2 km dan celah gap menjadi radius 4,8 km dengan pergeseran offset agar bertumpuk secara realistis.
 
 ## Data Flow
-- Saat user memfilter provinsi (misal: "Lampung"), `ChargerMap` menghitung rata-rata lat/lng dari array stasiun Lampung, lalu menggambar poligon suplai & celah di sekitar pusat wilayah tersebut.
+- ChargerMap menghitung rata-rata lat/lng wilayah aktif, men-generate poligon organik bersisi 12 berdasarkan skala jarak meter, dan merendernya ke peta.
 
 ## Success Criteria
-- [ ] Whitespace heatmap poligon biru dan merah tampil di semua provinsi termasuk Lampung.
+- [ ] Poligon suplai (Biru) dan celah gap (Merah) di peta berbentuk meliuk alami (organik) dan berukuran besar menutupi area metropolitan/kota.
