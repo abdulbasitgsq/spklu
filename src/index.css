@@ -221,8 +221,9 @@ h1, h2, h3, h4, h5, h6 {
   padding: 16px 24px;
   background-color: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
-  overflow-x: auto;
-  white-space: nowrap;
+  overflow: visible;
+  position: relative;
+  z-index: 1005;
 }
 
 .filter-pill {
@@ -286,9 +287,6 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-right: 12px;
-  padding-right: 12px;
-  border-right: 1px solid var(--border-color);
 }
 
 /* Main Split Content */
