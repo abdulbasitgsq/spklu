@@ -98,16 +98,16 @@ export default function ChargerList({
     );
   };
 
-  const getPowerTypePill = (powerStr) => {
+  const getPowerTypePill = (powerStr, index) => {
     const isDC = powerStr.toLowerCase().includes('dc');
     const kwVal = parseInt(powerStr.replace(/\D/g, '')) || 0;
     
     if (isDC && kwVal >= 100) {
-      return <span key={powerStr} className="spec-pill ultra-fast">{powerStr} Ultra</span>;
+      return <span key={`${powerStr}-${index}`} className="spec-pill ultra-fast">{powerStr} Ultra</span>;
     } else if (isDC) {
-      return <span key={powerStr} className="spec-pill fast">{powerStr} Fast</span>;
+      return <span key={`${powerStr}-${index}`} className="spec-pill fast">{powerStr} Fast</span>;
     }
-    return <span key={powerStr} className="spec-pill">{powerStr}</span>;
+    return <span key={`${powerStr}-${index}`} className="spec-pill">{powerStr}</span>;
   };
 
   const displayedChargers = chargers.slice(0, 50);
@@ -156,7 +156,7 @@ export default function ChargerList({
                 <div className="card-address">{charger.address}</div>
 
                 <div className="card-specs">
-                  {charger.connectors.map((conn) => getPowerTypePill(conn.power))}
+                  {charger.connectors.map((conn, idx) => getPowerTypePill(conn.power, idx))}
                 </div>
 
                 <div className="card-footer">
