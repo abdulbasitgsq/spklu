@@ -6,7 +6,7 @@ export default function Header({ searchVal, onSearchChange }) {
     <header className="main-header">
       <div className="logo-container" onClick={() => onSearchChange('')}>
         <Zap className="logo-icon" size={28} fill="currentColor" />
-        <span className="logo-text">ChargeBnb</span>
+        <span className="logo-text">EV Infrastructure</span>
       </div>
 
       <div className="search-container">
