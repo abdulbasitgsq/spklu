@@ -224,6 +224,7 @@ export default function App() {
             visiblePOIs={visiblePOIs}
             onSelectWhitespace={setSelectedWhitespace}
             searchedLocation={searchedLocation}
+            selectedProvinsi={selectedProvinsi}
           />
           <PlanningPanel 
             activeHeatmap={activeHeatmap}

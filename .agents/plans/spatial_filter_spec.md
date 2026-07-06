@@ -1,28 +1,24 @@
-# Spec: Filter Wilayah (Provinsi & Kabupaten/Kota)
+# Spec: Poligon Mismatch Spasial & Legenda Peta (Spatial Mismatch Heatmap & Legend)
 
 ## Objective
-Menyediakan mekanisme filtering berbasis wilayah (Provinsi dan Kota/Kabupaten) secara bertingkat untuk menyaring 4.707 stasiun pengisian daya EV. Hal ini membatasi jumlah data yang dikomputasi dan dirender di frontend, sehingga aplikasi berjalan sangat lancar dan ringan.
+Mengganti visualisasi whitespace dari yang sebelumnya berbentuk lingkaran titik menjadi bentuk Poligon Mismatch Spasial (Suplai Aktif vs Celah Permintaan) yang sesuai dengan teori kesenjangan spasial pada referensi proyek `gs-ev-demand.web.app`, lengkap dengan legenda petunjuk warna.
 
 ## Business Types
-- Tipe bisnis: General / EV Charging Locator.
+- Tipe bisnis: General / EV Charging Locator & Planner.
 
 ## Database Changes
 - Tidak ada.
 
 ## UI Changes
-- **Filter Bar (`src/components/FilterBar.jsx` & `src/index.css`)**:
-  - Menambahkan dua dropdown HTML `<select>` di sebelah kiri filter kategori.
-  - Dropdown 1: "Pilih Provinsi" (Jawa Barat, Banten, Bali, dll.).
-  - Dropdown 2: "Pilih Kabupaten/Kota" (terbuka jika Provinsi dipilih).
-  - Bergaya modern: background putih, font Inter, border bulat tipis, padding proporsional.
+- **Peta Interaktif (`src/components/ChargerMap.jsx`)**:
+  - Menggambar dua jenis area poligon: Area Biru (Suplai SPKLU Aktif) dan Area Merah (Celah Permintaan Kosong/Tinggi).
+  - Menampilkan box Legenda Spasial melayang di pojok kanan bawah peta saat fitur heatmap diaktifkan.
+- **Styling Legenda (`src/index.css`)**:
+  - Menambahkan styling box legenda glassmorphism melayang.
 
 ## Data Flow
-- `App.jsx` mengompilasi daftar unik Provinsi secara nasional, dan Kota/Kabupaten berdasarkan Provinsi terpilih.
-- `selectedProvinsi` dan `selectedKabupaten` mengontrol filter pada array `chargersData`.
-- Hasil saringan dikirim ke `ChargerList` (menampilkan 50 stasiun teratas) dan `ChargerMap` (merender 200 marker teratas).
+- Memasukkan data koordinat poligon wilayah Jakarta, Bandung, dan Bali ke dalam `src/data/planningData.js`. Data poligon dibaca dinamis berdasarkan provinsi aktif yang dipilih di filter bar.
 
 ## Success Criteria
-- [ ] Dropdown Provinsi memuat daftar unik provinsi secara alfabetis dari dataset.
-- [ ] Memilih Provinsi menyaring data peta dan list secara seketika, serta memicu dropdown Kota/Kabupaten.
-- [ ] Memilih "Semua Provinsi" (kosong) mereset filter Kota/Kabupaten dan menampilkan seluruh data nasional.
-- [ ] Penggunaan filter regional menurunkan beban rendering sehingga rendering list dan peta berjalan instan.
+- [ ] Peta memunculkan visualisasi poligon biru (Existing Supply) dan poligon merah (Demand Gap) saat analisis perencanaan diaktifkan.
+- [ ] Legenda peta melayang tampil dengan warna panduan penunjuk yang akurat.

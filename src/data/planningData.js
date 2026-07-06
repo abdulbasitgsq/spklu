@@ -6,6 +6,7 @@ export const whitespacePoints = [
     id: "ws-jk-1",
     name: "Cluster Kemang Gaps",
     city: "Jakarta Selatan",
+    provinsi: "DKI Jakarta",
     lat: -6.2731,
     lng: 106.8106,
     category: "slow",
@@ -25,6 +26,7 @@ export const whitespacePoints = [
     id: "ws-jk-2",
     name: "Menteng Hub Gaps",
     city: "Jakarta Pusat",
+    provinsi: "DKI Jakarta",
     lat: -6.1919,
     lng: 106.8322,
     category: "medium",
@@ -44,6 +46,7 @@ export const whitespacePoints = [
     id: "ws-jk-3",
     name: "Tol Dalam Kota Kuningan Corridor",
     city: "Jakarta Selatan",
+    provinsi: "DKI Jakarta",
     lat: -6.2367,
     lng: 106.8228,
     category: "high",
@@ -63,6 +66,7 @@ export const whitespacePoints = [
     id: "ws-jk-4",
     name: "CBD Sudirman Ultrafast Gap",
     city: "Jakarta Pusat",
+    provinsi: "DKI Jakarta",
     lat: -6.2146,
     lng: 106.8184,
     category: "highspeed",
@@ -84,6 +88,7 @@ export const whitespacePoints = [
     id: "ws-bd-1",
     name: "Dago Wisata Gaps",
     city: "Bandung",
+    provinsi: "Jawa Barat",
     lat: -6.8864,
     lng: 107.6152,
     category: "highspeed",
@@ -103,6 +108,7 @@ export const whitespacePoints = [
     id: "ws-bd-2",
     name: "Pasteur Gateway Gaps",
     city: "Bandung",
+    provinsi: "Jawa Barat",
     lat: -6.8992,
     lng: 107.5756,
     category: "high",
@@ -124,6 +130,7 @@ export const whitespacePoints = [
     id: "ws-bl-1",
     name: "Seminyak Retail Gaps",
     city: "Badung, Bali",
+    provinsi: "Bali",
     lat: -8.6913,
     lng: 115.1682,
     category: "medium",
@@ -143,6 +150,7 @@ export const whitespacePoints = [
     id: "ws-bl-2",
     name: "Kuta Beachfront Corridor",
     city: "Badung, Bali",
+    provinsi: "Bali",
     lat: -8.7224,
     lng: 115.1678,
     category: "high",
@@ -164,6 +172,7 @@ export const whitespacePoints = [
     id: "ws-sb-1",
     name: "Gubeng Station Area Gaps",
     city: "Surabaya",
+    provinsi: "Jawa Timur",
     lat: -7.2654,
     lng: 112.7519,
     category: "medium",
@@ -186,6 +195,7 @@ export const spbuLocations = [
   {
     id: "spbu-jk-1",
     name: "SPBU Pertamina 31.12902 Kuningan",
+    provinsi: "DKI Jakarta",
     lat: -6.2345,
     lng: 106.8234,
     address: "Jl. H. R. Rasuna Said Kav. X-2, Kuningan, Jakarta Selatan"
@@ -193,6 +203,7 @@ export const spbuLocations = [
   {
     id: "spbu-jk-2",
     name: "SPBU Shell Gatot Subroto",
+    provinsi: "DKI Jakarta",
     lat: -6.2392,
     lng: 106.8185,
     address: "Jl. Jenderal Gatot Subroto No. 34, Jakarta Selatan"
@@ -200,6 +211,7 @@ export const spbuLocations = [
   {
     id: "spbu-jk-3",
     name: "SPBU Pertamina 31.10303 Menteng",
+    provinsi: "DKI Jakarta",
     lat: -6.1882,
     lng: 106.8368,
     address: "Jl. Cikini Raya No. 113, Menteng, Jakarta Pusat"
@@ -207,6 +219,7 @@ export const spbuLocations = [
   {
     id: "spbu-jk-4",
     name: "SPBU Shell Kemang Raya",
+    provinsi: "DKI Jakarta",
     lat: -6.2698,
     lng: 106.8152,
     address: "Jl. Kemang Raya No. 45, Jakarta Selatan"
@@ -216,6 +229,7 @@ export const spbuLocations = [
   {
     id: "spbu-bd-1",
     name: "SPBU Pertamina 34.40116 Dago",
+    provinsi: "Jawa Barat",
     lat: -6.8895,
     lng: 107.6160,
     address: "Jl. Ir. H. Juanda No. 139, Dago, Bandung"
@@ -223,6 +237,7 @@ export const spbuLocations = [
   {
     id: "spbu-bd-2",
     name: "SPBU Pertamina 34.40135 Pasteur",
+    provinsi: "Jawa Barat",
     lat: -6.8975,
     lng: 107.5810,
     address: "Jl. Dr. Djunjunan No. 120, Pasteur, Bandung"
@@ -232,6 +247,7 @@ export const spbuLocations = [
   {
     id: "spbu-bl-1",
     name: "SPBU Pertamina 54.80327 Seminyak",
+    provinsi: "Bali",
     lat: -8.6854,
     lng: 115.1742,
     address: "Jl. Sunset Road, Seminyak, Badung, Bali"
@@ -239,6 +255,7 @@ export const spbuLocations = [
   {
     id: "spbu-bl-2",
     name: "SPBU Pertamina 54.80305 Kuta Bypass",
+    provinsi: "Bali",
     lat: -8.7295,
     lng: 115.1795,
     address: "Jl. Bypass Ngurah Rai, Kuta, Bali"
@@ -250,6 +267,7 @@ export const plnLocations = [
   {
     id: "pln-jk-1",
     name: "PLN Gardu Induk Menteng",
+    provinsi: "DKI Jakarta",
     lat: -6.1952,
     lng: 106.8290,
     address: "Jl. Sutan Syahrir No. 1, Menteng, Jakarta Pusat"
@@ -257,6 +275,7 @@ export const plnLocations = [
   {
     id: "pln-jk-2",
     name: "PLN UP3 Bulungan KEBAYORAN",
+    provinsi: "DKI Jakarta",
     lat: -6.2420,
     lng: 106.7972,
     address: "Jl. Bulungan No. 3, Kebayoran Baru, Jakarta Selatan"
@@ -264,6 +283,7 @@ export const plnLocations = [
   {
     id: "pln-jk-3",
     name: "PLN Distribusi Jakarta Raya Kuningan",
+    provinsi: "DKI Jakarta",
     lat: -6.2238,
     lng: 106.8298,
     address: "Jl. M.I. Ridwan Rais No. 1, Jakarta Pusat"
@@ -273,6 +293,7 @@ export const plnLocations = [
   {
     id: "pln-bd-1",
     name: "PLN UP3 Bandung Cikapundung",
+    provinsi: "Jawa Barat",
     lat: -6.9152,
     lng: 107.6105,
     address: "Jl. Asia Afrika No. 63, Bandung"
@@ -282,6 +303,7 @@ export const plnLocations = [
   {
     id: "pln-bl-1",
     name: "PLN ULP Denpasar Timur",
+    provinsi: "Bali",
     lat: -8.6582,
     lng: 115.2425,
     address: "Jl. Bypass Ngurah Rai, Sanur, Denpasar, Bali"
@@ -301,3 +323,193 @@ export const searchableAddresses = [
   { name: "SPBU Pertamina Dago", lat: -6.8895, lng: 107.6160, zoom: 16, type: "spbu" },
   { name: "SPBU Pertamina Seminyak", lat: -8.6854, lng: 115.1742, zoom: 16, type: "spbu" }
 ];
+
+export const spatialMismatchData = {
+  "DKI Jakarta": {
+    slow: {
+      supply: [
+        [-6.18, 106.81],
+        [-6.18, 106.84],
+        [-6.23, 106.84],
+        [-6.23, 106.81]
+      ],
+      gap: [
+        [-6.24, 106.81],
+        [-6.24, 106.85],
+        [-6.28, 106.85],
+        [-6.28, 106.81]
+      ],
+      desc: "Slow AC Gap (7.4 kW): Konsentrasi mobil listrik pemukiman tinggi di Kemang & Cilandak butuh pengisian lambat rumahan."
+    },
+    medium: {
+      supply: [
+        [-6.19, 106.815],
+        [-6.18, 106.835],
+        [-6.225, 106.845],
+        [-6.23, 106.81]
+      ],
+      gap: [
+        [-6.23, 106.81],
+        [-6.225, 106.855],
+        [-6.275, 106.865],
+        [-6.27, 106.815]
+      ],
+      desc: "Destination Whitespaces (22 kW): Mismatch spasial antara densitas POI hotel/ritel tinggi dengan minimnya suplai Medium AC di Jaksel."
+    },
+    fast: {
+      supply: [
+        [-6.195, 106.82],
+        [-6.185, 106.83],
+        [-6.21, 106.835],
+        [-6.215, 106.81]
+      ],
+      gap: [
+        [-6.22, 106.82],
+        [-6.21, 106.85],
+        [-6.26, 106.85],
+        [-6.25, 106.81]
+      ],
+      desc: "Transit Whitespaces (50 kW): Gaps di area tol dalam kota Kuningan & Tebet untuk pengemudi taksi online transit."
+    },
+    highspeed: {
+      supply: [
+        [-6.20, 106.81],
+        [-6.19, 106.83],
+        [-6.215, 106.83],
+        [-6.22, 106.81]
+      ],
+      gap: [
+        [-6.23, 106.81],
+        [-6.22, 106.84],
+        [-6.28, 106.84],
+        [-6.28, 106.81]
+      ],
+      desc: "Highway Transit Whitespaces (120+ kW): Celah koridor Sudirman/Thamrin & TB Simatupang untuk pengisian ultrafast mobil premium."
+    }
+  },
+  "Jawa Barat": {
+    slow: {
+      supply: [
+        [-6.88, 107.60],
+        [-6.88, 107.62],
+        [-6.91, 107.62],
+        [-6.91, 107.60]
+      ],
+      gap: [
+        [-6.91, 107.57],
+        [-6.91, 107.60],
+        [-6.93, 107.60],
+        [-6.93, 107.57]
+      ],
+      desc: "Slow AC Gap (7.4 kW): Kebutuhan charging rumahan di perumahan Bandung Utara."
+    },
+    medium: {
+      supply: [
+        [-6.88, 107.59],
+        [-6.87, 107.62],
+        [-6.90, 107.62],
+        [-6.90, 107.59]
+      ],
+      gap: [
+        [-6.90, 107.56],
+        [-6.90, 107.59],
+        [-6.92, 107.59],
+        [-6.92, 107.56]
+      ],
+      desc: "Destination Whitespaces (22 kW): Area komersial Pasteur & PVJ terindikasi gap pengisian AC 22kW tujuan belanja."
+    },
+    fast: {
+      supply: [
+        [-6.89, 107.60],
+        [-6.89, 107.61],
+        [-6.91, 107.61],
+        [-6.91, 107.60]
+      ],
+      gap: [
+        [-6.89, 107.57],
+        [-6.89, 107.59],
+        [-6.91, 107.59],
+        [-6.91, 107.57]
+      ],
+      desc: "Transit Whitespaces (50 kW): Jalur komuter utama Pasteur gate menuju pusat kota."
+    },
+    highspeed: {
+      supply: [
+        [-6.89, 107.60],
+        [-6.88, 107.62],
+        [-6.90, 107.62],
+        [-6.90, 107.60]
+      ],
+      gap: [
+        [-6.91, 107.58],
+        [-6.91, 107.61],
+        [-6.93, 107.61],
+        [-6.93, 107.58]
+      ],
+      desc: "Highway Transit Whitespaces (120+ kW): Pintu keluar tol Pasteur menuju Dago."
+    }
+  },
+  "Bali": {
+    slow: {
+      supply: [
+        [-8.71, 115.15],
+        [-8.71, 115.19],
+        [-8.74, 115.19],
+        [-8.74, 115.15]
+      ],
+      gap: [
+        [-8.67, 115.14],
+        [-8.67, 115.18],
+        [-8.70, 115.18],
+        [-8.70, 115.14]
+      ],
+      desc: "Slow AC Gap (7.4 kW): Area villa Seminyak & Canggu butuh stasiun slow AC untuk mobil sewaan turis menginap."
+    },
+    medium: {
+      supply: [
+        [-8.72, 115.16],
+        [-8.71, 115.19],
+        [-8.735, 115.19],
+        [-8.73, 115.16]
+      ],
+      gap: [
+        [-8.68, 115.15],
+        [-8.67, 115.18],
+        [-8.71, 115.18],
+        [-8.71, 115.15]
+      ],
+      desc: "Destination Whitespaces (22 kW): Pusat keramaian turis di Kuta & Seminyak butuh pengisian AC di mall beachfront."
+    },
+    fast: {
+      supply: [
+        [-8.72, 115.15],
+        [-8.72, 115.17],
+        [-8.74, 115.17],
+        [-8.74, 115.15]
+      ],
+      gap: [
+        [-8.69, 115.15],
+        [-8.69, 115.17],
+        [-8.71, 115.17],
+        [-8.71, 115.15]
+      ],
+      desc: "Transit Whitespaces (50 kW): Koridor Bypass Ngurah Rai menuju Jimbaran."
+    },
+    highspeed: {
+      supply: [
+        [-8.73, 115.16],
+        [-8.72, 115.18],
+        [-8.74, 115.18],
+        [-8.74, 115.16]
+      ],
+      gap: [
+        [-8.70, 115.15],
+        [-8.70, 115.17],
+        [-8.72, 115.17],
+        [-8.72, 115.15]
+      ],
+      desc: "Highway Transit Whitespaces (120+ kW): Kuta Bypass menuju gerbang tol Nusa Dua."
+    }
+  }
+};
+
