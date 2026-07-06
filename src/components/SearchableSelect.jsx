@@ -64,7 +64,7 @@ export default function SearchableSelect({
               <X size={14} />
             </button>
           )}
-          <ChevronDown size={16} className={`chevron-icon ${isOpen ? 'rotate' : ''}`} />
+          <ChevronDown size={14} className={`chevron-icon ${isOpen ? 'rotate' : ''}`} />
         </div>
       </div>
 
