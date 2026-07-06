@@ -1,7 +1,7 @@
-# Spec: Poligon Mismatch Spasial & Legenda Peta (Spatial Mismatch Heatmap & Legend)
+# Spec: Poligon Whitespace Otomatis untuk Semua Provinsi (Dynamic Spatial Mismatch Fallback)
 
 ## Objective
-Mengganti visualisasi whitespace dari yang sebelumnya berbentuk lingkaran titik menjadi bentuk Poligon Mismatch Spasial (Suplai Aktif vs Celah Permintaan) yang sesuai dengan teori kesenjangan spasial pada referensi proyek `gs-ev-demand.web.app`, lengkap dengan legenda petunjuk warna.
+Mengatasi masalah hilangnya visualisasi heatmap poligon whitespace saat memfilter provinsi yang belum memiliki koordinat perencanaan statis (seperti Lampung). Hal ini dicapai dengan men-generate poligon tiruan secara dinamis di sekitar koordinat rata-rata stasiun pada wilayah terpilih.
 
 ## Business Types
 - Tipe bisnis: General / EV Charging Locator & Planner.
@@ -11,14 +11,11 @@ Mengganti visualisasi whitespace dari yang sebelumnya berbentuk lingkaran titik 
 
 ## UI Changes
 - **Peta Interaktif (`src/components/ChargerMap.jsx`)**:
-  - Menggambar dua jenis area poligon: Area Biru (Suplai SPKLU Aktif) dan Area Merah (Celah Permintaan Kosong/Tinggi).
-  - Menampilkan box Legenda Spasial melayang di pojok kanan bawah peta saat fitur heatmap diaktifkan.
-- **Styling Legenda (`src/index.css`)**:
-  - Menambahkan styling box legenda glassmorphism melayang.
+  - Menambahkan fungsi pembangun poligon dinamis `generateMockSpatialMismatch` berpusat di koordinat stasiun yang aktif.
+  - Menjadikan poligon dinamis ini sebagai fallback utama jika data statis di `planningData.js` tidak tersedia untuk wilayah yang dipilih.
 
 ## Data Flow
-- Memasukkan data koordinat poligon wilayah Jakarta, Bandung, dan Bali ke dalam `src/data/planningData.js`. Data poligon dibaca dinamis berdasarkan provinsi aktif yang dipilih di filter bar.
+- Saat user memfilter provinsi (misal: "Lampung"), `ChargerMap` menghitung rata-rata lat/lng dari array stasiun Lampung, lalu menggambar poligon suplai & celah di sekitar pusat wilayah tersebut.
 
 ## Success Criteria
-- [ ] Peta memunculkan visualisasi poligon biru (Existing Supply) dan poligon merah (Demand Gap) saat analisis perencanaan diaktifkan.
-- [ ] Legenda peta melayang tampil dengan warna panduan penunjuk yang akurat.
+- [ ] Whitespace heatmap poligon biru dan merah tampil di semua provinsi termasuk Lampung.

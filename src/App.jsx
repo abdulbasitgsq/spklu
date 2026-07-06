@@ -150,6 +150,7 @@ export default function App() {
 
   const handleSelectCharger = (charger) => {
     setActiveChargerId(charger.id);
+    setDetailCharger(charger);
   };
 
   const handleTogglePOI = (poiId) => {

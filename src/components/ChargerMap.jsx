@@ -3,6 +3,34 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { whitespacePoints, spbuLocations, plnLocations, spatialMismatchData } from '../data/planningData';
 
+// Helper: Generate dynamic mock supply & gap polygons centered around active coordinates
+const generateMockSpatialMismatch = (lat, lng, activeHeatmap) => {
+  const supply = [
+    [lat + 0.015, lng - 0.015],
+    [lat + 0.015, lng + 0.015],
+    [lat - 0.015, lng + 0.015],
+    [lat - 0.015, lng - 0.015]
+  ];
+
+  const gap = [
+    [lat - 0.005, lng - 0.025],
+    [lat - 0.005, lng + 0.025],
+    [lat - 0.045, lng + 0.025],
+    [lat - 0.045, lng - 0.025]
+  ];
+
+  let speedLabel = "";
+  let speedKw = "";
+  if (activeHeatmap === 'slow') { speedLabel = "Slow AC Gap"; speedKw = "7.4 kW"; }
+  else if (activeHeatmap === 'medium') { speedLabel = "Destination Whitespaces"; speedKw = "22 kW"; }
+  else if (activeHeatmap === 'fast') { speedLabel = "Transit Whitespaces"; speedKw = "50 kW"; }
+  else if (activeHeatmap === 'highspeed') { speedLabel = "Highway Transit Whitespaces"; speedKw = "120+ kW"; }
+
+  const desc = `${speedLabel} (${speedKw}): Kawasan ini terdeteksi memiliki gap kapasitas pengisian daya EV ${speedKw} yang belum terpenuhi.`;
+
+  return { supply, gap, desc };
+};
+
 export default function ChargerMap({ 
   chargers, 
   activeChargerId, 
@@ -132,7 +160,6 @@ export default function ChargerMap({
         <div class="map-popup-info">
           <h4 class="map-popup-title">${charger.name}</h4>
           <p class="map-popup-price">Tarif: <span>Rp ${minPrice.toLocaleString('id-ID')}</span>/kWh</p>
-          <button class="map-popup-btn" id="popup-btn-${charger.id}">Lihat Detail & Booking</button>
         </div>
       `;
 
@@ -141,16 +168,6 @@ export default function ChargerMap({
 
       marker.on('click', () => {
         onSelectCharger(charger);
-      });
-
-      marker.on('popupopen', () => {
-        const btn = document.getElementById(`popup-btn-${charger.id}`);
-        if (btn) {
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            onOpenDetail(charger);
-          });
-        }
       });
 
       markersRef.current[charger.id] = marker;
@@ -177,10 +194,20 @@ export default function ChargerMap({
 
     // 1. Render Polygons for Spatial Mismatch (Supply & Gaps)
     if (activeHeatmap) {
+      let mismatch = null;
+
+      // Check if we have pre-defined data for this province
       const provData = spatialMismatchData[activeProv];
       if (provData && provData[activeHeatmap]) {
-        const mismatch = provData[activeHeatmap];
+        mismatch = provData[activeHeatmap];
+      } else {
+        // Fallback: generate dynamic mock polygons centered on current active chargers view
+        const avgLat = chargers.length > 0 ? chargers.reduce((sum, c) => sum + c.lat, 0) / chargers.length : -6.20;
+        const avgLng = chargers.length > 0 ? chargers.reduce((sum, c) => sum + c.lng, 0) / chargers.length : 106.82;
+        mismatch = generateMockSpatialMismatch(avgLat, avgLng, activeHeatmap);
+      }
 
+      if (mismatch) {
         // A. Existing Supply Polygon (Blue)
         const supplyPoly = L.polygon(mismatch.supply, {
           color: '#2563eb',
@@ -221,6 +248,27 @@ export default function ChargerMap({
                           || whitespacePoints.find(p => p.category === activeHeatmap);
           if (foundPt) {
             onSelectWhitespace(foundPt);
+          } else {
+            // Generate temporary mock suitability object if no static whitespacePoint matches
+            const mockPoint = {
+              id: "mock-ws",
+              name: mismatch.desc.split(':')[0],
+              city: activeProv,
+              provinsi: activeProv,
+              lat: mismatch.gap[0][0],
+              lng: mismatch.gap[0][1],
+              category: activeHeatmap,
+              scores: {
+                plnGrid: 8.5,
+                traffic: 8.8,
+                poiDensity: 8.0,
+                competition: 9.0,
+                overall: 86,
+                recommendation: "LAYAK",
+                description: mismatch.desc
+              }
+            };
+            onSelectWhitespace(mockPoint);
           }
         });
 
@@ -231,7 +279,20 @@ export default function ChargerMap({
     // 2. Render SPBU POIs if checked (Filtered by Province)
     if (visiblePOIs.includes('spbu')) {
       const displaySpbus = spbuLocations.filter(spbu => spbu.provinsi === activeProv);
-      displaySpbus.forEach((spbu) => {
+      // Fallback: draw mock SPBUs centered around filtered view if selected province has no predefined static ones
+      const finalSpbus = displaySpbus.length > 0 ? displaySpbus : (
+        chargers.length > 0 ? [
+          {
+            id: "spbu-mock-1",
+            name: "SPBU Pertamina Rest Area",
+            lat: chargers[0].lat + 0.005,
+            lng: chargers[0].lng - 0.005,
+            address: `Jl. Trans Utama, ${activeProv}`
+          }
+        ] : []
+      );
+
+      finalSpbus.forEach((spbu) => {
         const icon = L.divIcon({
           className: 'poi-div-icon',
           html: `
@@ -261,7 +322,20 @@ export default function ChargerMap({
     // 3. Render PLN Grid POIs if checked (Filtered by Province)
     if (visiblePOIs.includes('pln')) {
       const displayPlns = plnLocations.filter(pln => pln.provinsi === activeProv);
-      displayPlns.forEach((pln) => {
+      // Fallback: draw mock PLN office if selected province has no predefined static ones
+      const finalPlns = displayPlns.length > 0 ? displayPlns : (
+        chargers.length > 0 ? [
+          {
+            id: "pln-mock-1",
+            name: "Kantor Pelayanan PLN Rayon",
+            lat: chargers[0].lat - 0.008,
+            lng: chargers[0].lng + 0.008,
+            address: `Jl. Ketenagalistrikan No. 1, ${activeProv}`
+          }
+        ] : []
+      );
+
+      finalPlns.forEach((pln) => {
         const icon = L.divIcon({
           className: 'poi-div-icon',
           html: `
@@ -288,7 +362,7 @@ export default function ChargerMap({
       });
     }
 
-  }, [activeHeatmap, visiblePOIs, onSelectWhitespace, selectedProvinsi]);
+  }, [activeHeatmap, visiblePOIs, onSelectWhitespace, selectedProvinsi, chargers]);
 
   // Handle Fly-To Search Location
   useEffect(() => {
