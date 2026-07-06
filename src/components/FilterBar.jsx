@@ -1,14 +1,6 @@
 import React from 'react';
-import { Compass, Zap, CheckCircle, Shield, Award, Landmark } from 'lucide-react';
-
-const FILTERS_DATA = [
-  { id: 'all', label: 'Semua', icon: Compass },
-  { id: 'available', label: 'Tersedia Sekarang', icon: CheckCircle },
-];
 
 export default function FilterBar({ 
-  activeFilters, 
-  onToggleFilter,
   selectedProvinsi,
   onProvinsiChange,
   selectedKabupaten,
@@ -74,22 +66,6 @@ export default function FilterBar({
           ))}
         </select>
       </div>
-
-      {FILTERS_DATA.map((filter) => {
-        const Icon = filter.icon;
-        const isActive = activeFilters.includes(filter.id) || (filter.id === 'all' && activeFilters.length === 0);
-        
-        return (
-          <button
-            key={filter.id}
-            className={`filter-pill ${isActive ? 'active' : ''}`}
-            onClick={() => onToggleFilter(filter.id)}
-          >
-            <Icon size={14} />
-            <span>{filter.label}</span>
-          </button>
-        );
-      })}
     </div>
   );
 }

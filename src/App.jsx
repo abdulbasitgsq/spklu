@@ -168,8 +168,6 @@ export default function App() {
 
       {/* 2. Airbnb Filter Category Bar */}
       <FilterBar 
-        activeFilters={activeFilters} 
-        onToggleFilter={handleToggleFilter} 
         selectedProvinsi={selectedProvinsi}
         onProvinsiChange={handleProvinsiChange}
         selectedKabupaten={selectedKabupaten}
