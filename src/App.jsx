@@ -13,10 +13,10 @@ import { searchableAddresses } from './data/planningData';
 const PROVINCES = [...new Set(chargersData.map(c => ((c && c.provinsi) || "").trim()))].filter(Boolean).sort();
 const PROVIDERS = [...new Set(chargersData.map(c => ((c && c.operator) || "").trim()))].filter(Boolean).sort();
 const SPEED_OPTIONS = [
-  { value: 'standard', label: 'Standard (AC)' },
-  { value: 'medium', label: 'Medium (AC)' },
-  { value: 'fast', label: 'Fast (DC)' },
-  { value: 'ultrafast', label: 'Ultrafast (DC)' }
+  { value: 'standard', label: 'Standard (AC) - 7.4 kW' },
+  { value: 'medium', label: 'Medium (AC) - 22 kW' },
+  { value: 'fast', label: 'Fast (DC) - 50 kW' },
+  { value: 'ultrafast', label: 'Ultrafast (DC) - 120+ kW' }
 ];
 
 export default function App() {
