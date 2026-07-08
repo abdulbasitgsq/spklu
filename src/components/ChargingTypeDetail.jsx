@@ -48,6 +48,26 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
     competition: 5
   });
 
+  // Get all unique operators for the selected province to display in the sidebar checklist
+  const availableOperators = useMemo(() => {
+    const ops = new Set();
+    chargersData.forEach(c => {
+      if (!provinsi || (c.provinsi || '').trim() === provinsi) {
+        if (c.operator) {
+          ops.add(c.operator.trim());
+        }
+      }
+    });
+    return Array.from(ops).sort();
+  }, [provinsi]);
+
+  const [selectedOperators, setSelectedOperators] = useState([]);
+
+  // Auto-select all available operators when the province changes or on initial mount
+  useEffect(() => {
+    setSelectedOperators(availableOperators);
+  }, [availableOperators]);
+
   // Calculate dynamic overall score for whitespaces and sort by overall score descending
   const calculatedWhitespaces = useMemo(() => {
     const catKey = categoryKeyMap[type];
@@ -142,11 +162,17 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
   // Max histogram count for scaling
   const maxCount = Math.max(...distribution.counts);
 
-  // Get filtered SPKLU chargers for the selected province as helper markers
+  // Get filtered SPKLU chargers for the selected province & selected operators as helper markers
   const helperChargers = useMemo(() => {
-    if (!provinsi) return chargersData.slice(0, 100);
-    return chargersData.filter(c => (c.provinsi || '').trim() === provinsi).slice(0, 200);
-  }, [provinsi]);
+    let filtered = provinsi 
+      ? chargersData.filter(c => (c.provinsi || '').trim() === provinsi)
+      : chargersData;
+
+    filtered = filtered.filter(c => c.operator && selectedOperators.includes(c.operator.trim()));
+    
+    // Slice to prevent map lag under high marker count (e.g. Semua Provinsi)
+    return filtered.slice(0, 250);
+  }, [provinsi, selectedOperators]);
 
   // Hook 1: Initialize Leaflet map instance once on mount, clean up on unmount
   useEffect(() => {
@@ -574,6 +600,71 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
                     </button>
                   ))}
                 </div>
+              </div>
+            </div>
+
+            {/* Provider SPKLU Filter Group */}
+            <div className="sidebar-group-card" style={{ marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="control-label" style={{ fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#717171' }}>Provider SPKLU</span>
+                <span style={{ fontSize: '11px', color: '#717171', fontWeight: 500 }}>{selectedOperators.length}/{availableOperators.length}</span>
+              </div>
+              
+              {/* Select All / Deselect All Actions */}
+              <div style={{ display: 'flex', gap: '8px', fontSize: '11px', fontWeight: 600 }}>
+                <button 
+                  type="button"
+                  onClick={() => setSelectedOperators(availableOperators)}
+                  style={{ background: 'none', border: 'none', padding: 0, color: info.color, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+                >
+                  Pilih Semua
+                </button>
+                <span style={{ color: '#ebebeb' }}>|</span>
+                <button 
+                  type="button"
+                  onClick={() => setSelectedOperators([])}
+                  style={{ background: 'none', border: 'none', padding: 0, color: '#717171', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+                >
+                  Hapus Semua
+                </button>
+              </div>
+
+              {/* Scrollable Checkbox list */}
+              <div className="provider-checkbox-list" style={{
+                maxHeight: '110px',
+                overflowY: 'auto',
+                border: '1px solid #ebebeb',
+                borderRadius: '8px',
+                padding: '6px 10px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                background: '#fafafa'
+              }}>
+                {availableOperators.length === 0 ? (
+                  <span style={{ fontSize: '11px', color: '#888', fontStyle: 'italic' }}>Tidak ada provider</span>
+                ) : (
+                  availableOperators.map(op => {
+                    const isChecked = selectedOperators.includes(op);
+                    return (
+                      <label key={op} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#222', cursor: 'pointer', userSelect: 'none' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedOperators(prev => [...prev, op]);
+                            } else {
+                              setSelectedOperators(prev => prev.filter(x => x !== op));
+                            }
+                          }}
+                          style={{ accentColor: info.color, cursor: 'pointer' }}
+                        />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{op}</span>
+                      </label>
+                    );
+                  })
+                )}
               </div>
             </div>
 
