@@ -920,8 +920,8 @@ h1, h2, h3, h4 {
 
 .map-container {
   width: 100%;
-  height: 70vh;
-  min-height: 500px;
+  height: 100%;
+  flex: 1;
   border-radius: var(--radius-lg);
   border: 1px solid var(--hairline);
   overflow: hidden;
@@ -1437,11 +1437,13 @@ h1, h2, h3, h4 {
   flex-direction: column;
 }
 
-/* Inner wrap: position anchor untuk floating panel, mengikuti ukuran map-container */
+/* Inner wrap: position anchor untuk floating panel, meregang setinggi parent */
 .map-inner-wrap {
   position: relative;
-  display: inline-block;
-  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 /* === Floating Layer Toggle Panel === */
