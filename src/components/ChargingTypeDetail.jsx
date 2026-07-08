@@ -40,8 +40,8 @@ const GRID_COLS = 15;
 const GRID_SPAN_DEG = 0.22; // ~24km span total for the grid
 
 export default function ChargingTypeDetail({ type, provinsi, onChangeType, onChangeProvinsi }) {
-  const info = chargingTypeInfo[type];
-  const distribution = gapDistributions[type];
+  const info = chargingTypeInfo[type || 'slow'];
+  const distribution = gapDistributions[type || 'slow'];
 
   // Dynamic Site Selection weights state (0-10, default 5)
   const [weights, setWeights] = useState({
@@ -138,9 +138,23 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
 
     filtered = filtered.filter(c => c.operator && selectedOperators.includes(c.operator.trim()));
 
+    // Filter by selected speed tier if active
+    if (type) {
+      const typeChargeMap = {
+        slow: 'standard',
+        medium: 'medium',
+        fast: 'fast',
+        highspeed: 'ultrafast'
+      };
+      const targetTypeCharge = typeChargeMap[type];
+      if (targetTypeCharge) {
+        filtered = filtered.filter(c => c.type_charge === targetTypeCharge);
+      }
+    }
+
     // Slice to prevent map lag under high marker count (e.g. Semua Provinsi)
     return filtered.slice(0, 250);
-  }, [provinsi, selectedOperators]);
+  }, [provinsi, selectedOperators, type]);
 
   // Pertamina/SPBU markers filtered by province
   const filteredSpbu = useMemo(() => {
@@ -780,7 +794,7 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
                         transition: 'all 0.15s ease',
                         textAlign: 'center'
                       }}
-                      onClick={() => onChangeType && onChangeType(speed.id)}
+                      onClick={() => onChangeType && onChangeType(type === speed.id ? '' : speed.id)}
                     >
                       {speed.label}
                     </button>

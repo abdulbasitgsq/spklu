@@ -13,7 +13,7 @@ export default function ChargingTypeTabs({ activeType, onChangeType }) {
           <button
             key={typeKey}
             className={`tab-btn ${isActive ? 'active' : ''}`}
-            onClick={() => onChangeType(typeKey)}
+            onClick={() => onChangeType(isActive ? '' : typeKey)}
             style={{
               '--tab-color': info.color,
               '--tab-color-light': info.colorLight,
