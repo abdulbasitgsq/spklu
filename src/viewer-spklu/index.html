@@ -1,0 +1,377 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Infrastructure: Spatial Mismatch</title>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --canvas: #f5f5f5;
+            --ink: #0c0a09;
+            --body: #4e4e4e;
+            --surface-card: #ffffff;
+            --surface-strong: #f0efed;
+            --hairline: #e7e5e4;
+            --hairline-strong: #d6d3d1;
+            --gradient-lavender: #c8b8e0;
+            --font-display: 'EB Garamond', serif;
+            --font-body: 'Inter', sans-serif;
+        }
+
+        body { background-color: var(--canvas); color: var(--body); font-family: var(--font-body); line-height: 1.5; letter-spacing: 0.16px; margin: 0; padding: 0; }
+        h1, h2, h3 { color: var(--ink); font-family: var(--font-display); font-weight: 400; margin-bottom: 16px; }
+        h1 { font-size: 48px; letter-spacing: -0.96px; line-height: 1.08; text-align: center;}
+        h2 { font-size: 36px; letter-spacing: -0.36px; line-height: 1.17; }
+        h3 { font-size: 24px; }
+        p { font-size: 16px; max-width: 700px; margin-bottom: 24px; }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+        .header { padding: 80px 0 40px 0; position: relative; }
+        
+        .tabs { display: flex; justify-content: center; gap: 12px; margin-bottom: 48px; }
+        .tab-btn { 
+            padding: 10px 24px; border-radius: 9999px; cursor: pointer; 
+            border: 1px solid var(--hairline-strong); background: transparent; 
+            color: var(--ink); font-family: var(--font-body); font-weight: 500; font-size: 15px;
+            transition: all 0.2s ease;
+        }
+        .tab-btn:hover { border-color: var(--ink); }
+        .tab-btn.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+        
+        .tab-content { display: none; animation: fadeIn 0.4s ease; padding-bottom: 96px;}
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 48px;}
+        .card { background: var(--surface-card); border: 1px solid var(--hairline); border-radius: 16px; padding: 24px; }
+        img { width: 100%; height: auto; border-radius: 8px; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 15px; margin-top: 16px;}
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--hairline); }
+        th { color: var(--ink); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.96px; }
+
+        /* Map & Legend Wrappers */
+        .map-container { position: relative; width: 100%; height: 70vh; min-height: 600px; border-radius: 16px; border: 1px solid var(--hairline); overflow: hidden; background: var(--surface-card); margin-bottom: 32px; }
+        .map-iframe { width: 100%; height: 100%; border: none; display: none; }
+        .map-iframe.active { display: block; }
+        
+        /* Inner Map Toggles */
+        .map-toggles { position: absolute; top: 16px; left: 16px; z-index: 10; display: flex; gap: 8px; background: var(--surface-card); padding: 8px; border-radius: 99px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border: 1px solid var(--hairline); }
+        .mini-btn { border: none; background: transparent; padding: 6px 16px; border-radius: 99px; cursor: pointer; font-family: var(--font-body); font-size: 13px; font-weight: 500; color: var(--body); }
+        .mini-btn.active { background: var(--surface-strong); color: var(--ink); }
+
+        /* Legends */
+        .legend { position: absolute; bottom: 16px; right: 16px; z-index: 10; background: var(--surface-card); padding: 16px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border: 1px solid var(--hairline); font-size: 13px; }
+        .legend-title { font-weight: 600; color: var(--ink); margin-bottom: 8px; }
+        .legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .legend-color { width: 16px; height: 16px; border-radius: 4px; }
+        .legend-gradient { width: 100%; height: 8px; background: linear-gradient(to right, rgba(196,78,82,0.3), rgba(196,78,82,1)); border-radius: 4px; margin-top: 8px; }
+
+        .orb-lavender { position: absolute; top: -100px; left: 50%; transform: translateX(-50%); width: 600px; height: 600px; background: radial-gradient(circle, var(--gradient-lavender) 0%, transparent 60%); opacity: 0.3; z-index: -1; pointer-events: none; }
+        .mermaid { background: var(--surface-card); padding: 32px; border-radius: 16px; border: 1px solid var(--hairline); display: flex; justify-content: center; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="orb-lavender"></div>
+        <div class="container">
+            <h1>EV Infrastructure: Spatial Mismatch</h1>
+            <p style="margin: 0 auto; color: var(--ink); font-weight: 500; text-align: center;">A behavioural approach to identifying unmet charging demand.</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Navigation -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('tab-context')">Context & Thesis</button>
+            <button class="tab-btn" onclick="switchTab('tab-medium')">Destination (22 kW)</button>
+            <button class="tab-btn" onclick="switchTab('tab-fast')">Transit (74 kW)</button>
+        </div>
+
+        <!-- TAB 1: CONTEXT -->
+        <div id="tab-context" class="tab-content active">
+            <h2>The National Context</h2>
+            <p>Before analysing Jakarta, we must understand the national supply. The interactive map below shows all active public charging stations across Indonesia. Use the toggle to view the infrastructure by charging speed, or by corporate provider.</p>
+            
+            <div class="map-container">
+                <div class="map-toggles">
+                    <button class="mini-btn active" onclick="switchInnerMap('nat-type')">By Speed</button>
+                    <button class="mini-btn" onclick="switchInnerMap('nat-prov')">By Provider</button>
+                </div>
+                
+                <iframe id="frame-nat-type" class="map-iframe active" src="outputs/map_national_type.html"></iframe>
+                <iframe id="frame-nat-prov" class="map-iframe" src="outputs/map_national_provider.html"></iframe>
+                
+                <!-- Legend for Speed -->
+                <div id="leg-nat-type" class="legend">
+                    <div class="legend-title">Charger Speed</div>
+                    <div class="legend-row"><div class="legend-color" style="background:#c44e52;"></div> Fast (>50kW)</div>
+                    <div class="legend-row"><div class="legend-color" style="background:#4c72b0;"></div> Medium (22kW)</div>
+                    <div class="legend-row"><div class="legend-color" style="background:#828282;"></div> Standard (<7kW)</div>
+                </div>
+
+                <!-- Legend for Provider -->
+                <div id="leg-nat-prov" class="legend" style="display:none;">
+                    <div class="legend-title">Top Providers</div>
+                    <div class="legend-row"><div class="legend-color" style="background:#55a868;"></div> PLN</div>
+                    <div class="legend-row"><div class="legend-color" style="background:#dd8452;"></div> Voltron</div>
+                    <div class="legend-row"><div class="legend-color" style="background:#4c72b0;"></div> Terra Charge</div>
+                    <div class="legend-row"><div class="legend-color" style="background:#8172b3;"></div> Utomo Charge+</div>
+                    <div class="legend-row"><div class="legend-color" style="background:#c44e52;"></div> Hyundai</div>
+                    <div class="legend-row"><div class="legend-color" style="background:#969696;"></div> Others</div>
+                </div>
+            </div>
+
+            <div class="grid-2" style="margin-bottom: 64px;">
+                <div class="card"><img src="outputs/01_spklu_by_speed.png" alt="Speed Divide"></div>
+                <div class="card"><img src="outputs/02_spklu_by_provider.png" alt="Providers"></div>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--hairline); margin-bottom: 64px;">
+
+            <div class="grid-2">
+                <div>
+                    <h2>The Philosophy of Demand</h2>
+                    <p>Traditional infrastructure planning relies heavily on demographics. It locates wealthy residential postcodes and builds there. In the context of EV charging, this is a trap. Users in wealthy suburbs charge their vehicles at home overnight. Public chargers in these areas remain unutilised.</p>
+                    <p>Our approach discards demographics in favour of <b>behaviour</b>. By tracking Points of Interest (POIs) like commercial hubs, offices, and major transit routes we capture the exact geography where a vehicle is stationary for an extended period.</p>
+                </div>
+                <div class="mermaid">
+                    graph TD
+                        classDef flawed fill:#f5f5f5,stroke:#e7e5e4,stroke-width:1px,color:#a8a29e;
+                        classDef solid fill:#ffffff,stroke:#0c0a09,stroke-width:1px,color:#0c0a09;
+                        
+                        subgraph Demographic Trap
+                            A(Wealthy Postcode) --> B(Private Driveways)
+                            B --> C[Public Charger Sits Empty]
+                        end
+                        class C flawed
+                    
+                        subgraph Behavioural Reality
+                            D(Point of Interest) --> E(Commercial Hub)
+                            E --> F[Public Charger Used]
+                        end
+                        class F solid
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: MEDIUM CHARGING (22kW) -->
+        <div id="tab-medium" class="tab-content">
+            <h2>Destination Whitespaces (22 kW)</h2>
+            <p>Medium chargers are for destinations. Users require locations where they will naturally dwell for 2 to 8 hours (offices, shopping centres, hotels). This map highlights the spatial mismatch: areas with high destination POI density but zero charging supply within a 3-minute drive.</p>
+            
+            <div class="map-container">
+                <iframe class="map-iframe active" src="outputs/map_medium.html"></iframe>
+                <div class="legend">
+                    <div class="legend-title">Spatial Mismatch</div>
+                    <div class="legend-row"><div class="legend-color" style="background:#4c72b0;"></div> Existing Supply</div>
+                    <div style="margin-top: 12px; color: var(--body); font-size: 12px;">Demand Gap Intensity</div>
+                    <div class="legend-gradient"></div>
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 4px;"><span>Low</span><span>High</span></div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div>
+                    <h3 style="margin-top:0;">The Opportunity Tail</h3>
+                    <p>The vast majority of the city has low demand. We target the extreme right tail of this distribution: the highly underserved micro-economies.</p>
+                    <img src="outputs/03_gap_distribution_medium.png" alt="Medium Gaps" style="border: 1px solid var(--hairline); border-radius: 8px;">
+                </div>
+                <div class="card">
+                    <h3 style="margin-top:0;">Top 10 Priority Grids</h3>
+                    <table>
+                        <tr><th>Grid ID</th><th>POI Count</th><th>Gap Score</th></tr>
+                        
+                        <tr>
+                            <td style="font-family: monospace;">J3N2M2Y7R7R</td>
+                            <td>180</td>
+                            <td>180.0</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-family: monospace;">J3N2M2Y7R8P</td>
+                            <td>174</td>
+                            <td>174.0</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-family: monospace;">J3N2M822H7M</td>
+                            <td>150</td>
+                            <td>150.0</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-family: monospace;">J3N2M822G8Q</td>
+                            <td>147</td>
+                            <td>147.0</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-family: monospace;">J3N2M822G8R</td>
+                            <td>147</td>
+                            <td>147.0</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-family: monospace;">J3N2M822P24</td>
+                            <td>147</td>
+                            <td>147.0</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-family: monospace;">J3N2M3T788F</td>
+                            <td>146</td>
+                            <td>146.0</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-family: monospace;">J3N2M822G8J</td>
+                            <td>145</td>
+                            <td>145.0</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-family: monospace;">J3N2M822H7W</td>
+                            <td>143</td>
+                            <td>143.0</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-family: monospace;">J3N2M2Y8P7F</td>
+                            <td>139</td>
+                            <td>139.0</td>
+                        </tr>
+                        
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: FAST CHARGING (74kW) -->
+        <div id="tab-fast" class="tab-content">
+            <h2>Transit Whitespaces (74 kW)</h2>
+            <p>Fast chargers are for transit. Users require locations where they can pull off the road, charge rapidly for 20 minutes, and leave. This map highlights the transit gaps using the same methodology.</p>
+            
+            <div class="map-container">
+                <iframe class="map-iframe active" src="outputs/map_fast.html"></iframe>
+                <div class="legend">
+                    <div class="legend-title">Spatial Mismatch</div>
+                    <div class="legend-row"><div class="legend-color" style="background:#4c72b0;"></div> Existing Supply</div>
+                    <div style="margin-top: 12px; color: var(--body); font-size: 12px;">Demand Gap Intensity</div>
+                    <div class="legend-gradient"></div>
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 4px;"><span>Low</span><span>High</span></div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div>
+                    <h3 style="margin-top:0;">The Opportunity Tail</h3>
+                    <p>Unlike destination charging, transit demand is heavily corridor-based. The underserved areas represent missing links in the active urban road network.</p>
+                    <img src="outputs/04_gap_distribution_fast.png" alt="Fast Gaps" style="border: 1px solid var(--hairline); border-radius: 8px;">
+                </div>
+                <div class="card">
+                    <h3 style="margin-top:0;">Top 10 Priority Grids</h3>
+                    <table>
+                        <tr><th>Grid ID</th><th>POI Count</th><th>Gap Score</th></tr>
+                        
+                        <tr>
+                            <td style="font-family: monospace;">J3N2M2Y7Y2C</td>
+                            <td>62</td>
+                            <td>62.0</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-family: monospace;">J3N2M2Y7X2G</td>
+                            <td>61</td>
+                            <td>61.0</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-family: monospace;">J3N2M2Y7Y25</td>
+                            <td>60</td>
+                            <td>60.0</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-family: monospace;">J3N2M2Y7Y2J</td>
+                            <td>60</td>
+                            <td>60.0</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-family: monospace;">J3N2M2Y7Y2X</td>
+                            <td>59</td>
+                            <td>59.0</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-family: monospace;">J3N2M2Y7Y75</td>
+                            <td>59</td>
+                            <td>59.0</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-family: monospace;">J3N2M2Y7X2N</td>
+                            <td>58</td>
+                            <td>58.0</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-family: monospace;">J3N2M2Y7X7H</td>
+                            <td>58</td>
+                            <td>58.0</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-family: monospace;">J3N2M2Y7Y7F</td>
+                            <td>58</td>
+                            <td>58.0</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="font-family: monospace;">J3N2M2Y7Q2V</td>
+                            <td>57</td>
+                            <td>57.0</td>
+                        </tr>
+                        
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+    </script>
+    <script>
+        // Main Tab Switcher
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        // Inner Map Switcher (National View)
+        function switchInnerMap(viewId) {
+            document.getElementById('frame-nat-type').classList.remove('active');
+            document.getElementById('frame-nat-prov').classList.remove('active');
+            document.getElementById('leg-nat-type').style.display = 'none';
+            document.getElementById('leg-nat-prov').style.display = 'none';
+            document.querySelectorAll('.mini-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('frame-' + viewId).classList.add('active');
+            document.getElementById('leg-' + viewId).style.display = 'block';
+            event.currentTarget.classList.add('active');
+        }
+    </script>
+</body>
+</html>
