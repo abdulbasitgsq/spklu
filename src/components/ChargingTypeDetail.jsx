@@ -3,7 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Award, Zap, Navigation, Building2, LayoutGrid, MapPin, Clock, User, Search } from 'lucide-react';
 import { chargingTypeInfo, gapDistributions, priorityGrids, categoryKeyMap } from '../data/showcaseData';
-import { whitespacePoints, spatialMismatchData, spbuLocations } from '../data/planningData';
+import { whitespacePoints, spatialMismatchData, spbuLocations, searchableAddresses } from '../data/planningData';
 import { chargersData } from '../data/chargers';
 import { gridCells, CELL_SIZE_DEG, realPriorityGrids } from '../data/realGridData';
 
