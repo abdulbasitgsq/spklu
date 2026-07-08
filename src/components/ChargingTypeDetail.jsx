@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useMemo, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Award, Zap, Navigation, Building2, LayoutGrid, MapPin, Clock, User } from 'lucide-react';
+import { Award, Zap, Navigation, Building2, LayoutGrid, MapPin, Clock, User, Search } from 'lucide-react';
 import { chargingTypeInfo, gapDistributions, priorityGrids, categoryKeyMap } from '../data/showcaseData';
 import { whitespacePoints, spatialMismatchData, spbuLocations } from '../data/planningData';
 import { chargersData } from '../data/chargers';
@@ -68,7 +68,6 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
     setSelectedOperators(availableOperators);
   }, [availableOperators]);
 
-  // Layer visibility toggles
   const [layerToggles, setLayerToggles] = useState({
     whitespace: true,       // grid sel merah/biru = analisis whitespace utama
     spkluMarkers: true,
@@ -76,6 +75,116 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
     opportunityMarkers: true, // lingkaran + titik whitespace opportunity
   });
   const toggleLayer = (key) => setLayerToggles(prev => ({ ...prev, [key]: !prev[key] }));
+
+  const [activeListTab, setActiveListTab] = useState('whitespace');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showProviderDropdown, setShowProviderDropdown] = useState(false);
+
+  // Close suggestions and provider dropdown on click outside
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (!e.target.closest('.map-search-wrapper')) {
+        setShowSuggestions(false);
+      }
+      if (!e.target.closest('.map-provider-dropdown-wrapper')) {
+        setShowProviderDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  // Dynamic ranking for SPBU Pertamina based on weights
+  const rankedSpbus = useMemo(() => {
+    return spbuLocations
+      .filter(s => !provinsi || s.provinsi === provinsi)
+      .map(s => {
+        // Deterministic but realistic scores based on ID/name
+        const seed = s.name.charCodeAt(0) + s.name.charCodeAt(s.name.length - 1);
+        const accessibility = 7 + (seed % 4); // 7-10
+        const demand = 5 + ((seed * 3) % 6); // 5-10
+        const competition = 4 + ((seed * 7) % 7); // 4-10
+        
+        const wSum = weights.accessibility + weights.demand + weights.competition;
+        const overall = wSum > 0 ? Math.round((
+          weights.accessibility * accessibility +
+          weights.demand * demand +
+          weights.competition * competition
+        ) / wSum * 10) : 70; // 0-100 score
+        
+        return {
+          ...s,
+          scores: { accessibility, demand, competition, overall }
+        };
+      })
+      .sort((a, b) => b.scores.overall - a.scores.overall);
+  }, [provinsi, weights]);
+
+  // Combine SPKLU, SPBU, and searchable addresses into searchable list
+  const allSearchableItems = useMemo(() => {
+    const items = [];
+    
+    // 1. SPBU Locations
+    spbuLocations
+      .filter(s => !provinsi || s.provinsi === provinsi)
+      .forEach(s => {
+        items.push({
+          id: s.id,
+          name: s.name,
+          address: s.address,
+          lat: s.lat,
+          lng: s.lng,
+          type: 'SPBU',
+          badgeColor: '#22c55e'
+        });
+      });
+      
+    // 2. SPKLU Locations
+    helperChargers.forEach(c => {
+      items.push({
+        id: c.id || Math.random().toString(),
+        name: c.name,
+        address: c.location_description || c.address || 'Lokasi SPKLU',
+        lat: c.lat,
+        lng: c.lng,
+        type: 'SPKLU',
+        badgeColor: '#fbbf24'
+      });
+    });
+    
+    // 3. General Addresses / Landmarks
+    searchableAddresses.forEach(a => {
+      const provMatch = !provinsi || 
+        (provinsi === 'DKI Jakarta' && a.name.toLowerCase().includes('jakarta')) ||
+        (provinsi === 'Jawa Barat' && a.name.toLowerCase().includes('bandung')) ||
+        (provinsi === 'Bali' && a.name.toLowerCase().includes('bali'));
+        
+      if (provMatch) {
+        items.push({
+          id: a.name,
+          name: a.name,
+          address: `${a.type === 'spbu' ? 'Stasiun Pengisian Bahan Bakar' : 'Landmark/Wilayah'}, ${a.name}`,
+          lat: a.lat,
+          lng: a.lng,
+          type: a.type === 'spbu' ? 'SPBU' : 'Wilayah',
+          badgeColor: a.type === 'spbu' ? '#22c55e' : '#3b82f6'
+        });
+      }
+    });
+    
+    return items;
+  }, [provinsi, helperChargers]);
+
+  const filteredSuggestions = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase();
+    return allSearchableItems.filter(item => 
+      item.name.toLowerCase().includes(query) || 
+      item.address.toLowerCase().includes(query) ||
+      item.type.toLowerCase().includes(query)
+    ).slice(0, 5);
+  }, [searchQuery, allSearchableItems]);
 
   // Calculate dynamic overall score for whitespaces and sort by overall score descending
   const calculatedWhitespaces = useMemo(() => {
@@ -631,73 +740,6 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
               </div>
             </div>
 
-            {/* Provider SPKLU Filter Group */}
-            <div className="sidebar-group-card" style={{ marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="control-label" style={{ fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#717171' }}>Provider SPKLU</span>
-                <span style={{ fontSize: '11px', color: '#717171', fontWeight: 500 }}>{selectedOperators.length}/{availableOperators.length}</span>
-              </div>
-              
-              {/* Select All / Deselect All Actions */}
-              <div style={{ display: 'flex', gap: '8px', fontSize: '11px', fontWeight: 600 }}>
-                <button 
-                  type="button"
-                  onClick={() => setSelectedOperators(availableOperators)}
-                  style={{ background: 'none', border: 'none', padding: 0, color: info.color, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
-                >
-                  Pilih Semua
-                </button>
-                <span style={{ color: '#ebebeb' }}>|</span>
-                <button 
-                  type="button"
-                  onClick={() => setSelectedOperators([])}
-                  style={{ background: 'none', border: 'none', padding: 0, color: '#717171', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
-                >
-                  Hapus Semua
-                </button>
-              </div>
-
-              {/* Scrollable Checkbox list */}
-              <div className="provider-checkbox-list" style={{
-                maxHeight: '110px',
-                overflowY: 'auto',
-                border: '1px solid #ebebeb',
-                borderRadius: '8px',
-                padding: '6px 10px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '6px',
-                background: '#fafafa'
-              }}>
-                {availableOperators.length === 0 ? (
-                  <span style={{ fontSize: '11px', color: '#888', fontStyle: 'italic' }}>Tidak ada provider</span>
-                ) : (
-                  availableOperators.map(op => {
-                    const isChecked = selectedOperators.includes(op);
-                    return (
-                      <label key={op} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#222', cursor: 'pointer', userSelect: 'none' }}>
-                        <input 
-                          type="checkbox" 
-                          checked={isChecked}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedOperators(prev => [...prev, op]);
-                            } else {
-                              setSelectedOperators(prev => prev.filter(x => x !== op));
-                            }
-                          }}
-                          style={{ accentColor: info.color, cursor: 'pointer' }}
-                        />
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{op}</span>
-                      </label>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            <div style={{ height: '1px', background: '#ebebeb', margin: '10px 0' }} />
-
             <h4 className="map-sidebar-title">Kriteria Pemilihan Lokasi</h4>
             <p className="map-sidebar-desc">
               Atur bobot kriteria di bawah ini untuk mensimulasikan kelayakan area secara dinamis.
@@ -802,6 +844,175 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
             <div className="map-inner-wrap">
               <div className="map-container" ref={mapRef} />
 
+              {/* Floating Controls — pojok kiri atas peta */}
+              <div className="map-top-left-controls">
+                {/* Search Bar */}
+                <div className="map-search-wrapper" style={{ position: 'relative' }}>
+                  <div className="map-search-bar">
+                    <Search size={14} className="map-search-icon" />
+                    <input
+                      type="text"
+                      placeholder="Cari SPBU / SPKLU..."
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setShowSuggestions(true);
+                      }}
+                      onFocus={() => setShowSuggestions(true)}
+                      className="map-search-input"
+                    />
+                    {searchQuery && (
+                      <button 
+                        onClick={() => setSearchQuery('')}
+                        className="map-search-clear"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Suggestions list */}
+                  {showSuggestions && filteredSuggestions.length > 0 && (
+                    <div className="map-search-dropdown">
+                      {filteredSuggestions.map((item) => (
+                        <div
+                          key={item.id + '-' + item.type}
+                          className="map-search-suggestion-item"
+                          onClick={() => {
+                            setSearchQuery(item.name);
+                            setShowSuggestions(false);
+                            const map = mapInstanceRef.current;
+                            if (map) {
+                              map.flyTo([item.lat, item.lng], 16, { duration: 1.5 });
+                              L.popup()
+                                .setLatLng([item.lat, item.lng])
+                                .setContent(`
+                                  <div style="font-family:'Inter',sans-serif;font-size:12px;line-height:1.4;min-width:140px;">
+                                    <div style="font-weight:700;color:${item.badgeColor}">${item.type}</div>
+                                    <div style="font-weight:600;margin-top:2px;">${item.name}</div>
+                                    <div style="font-size:11px;color:#666;margin-top:2px;">${item.address}</div>
+                                  </div>
+                                `)
+                                .openOn(map);
+                            }
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span className="suggestion-name" style={{ fontWeight: 600, fontSize: '12px' }}>{item.name}</span>
+                            <span className="suggestion-type-badge" style={{ fontSize: '9px', padding: '1px 4px', borderRadius: '3px', backgroundColor: item.badgeColor + '20', color: item.badgeColor, fontWeight: 700 }}>
+                              {item.type}
+                            </span>
+                          </div>
+                          <div className="suggestion-address" style={{ fontSize: '10px', color: '#666', marginTop: '2px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{item.address}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Provider Checkbox Dropdown */}
+                <div className="map-provider-dropdown-wrapper" style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    className={`map-provider-btn ${showProviderDropdown ? 'active' : ''}`}
+                    onClick={() => setShowProviderDropdown(!showProviderDropdown)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '8px 12px',
+                      background: 'rgba(255, 255, 255, 0.95)',
+                      backdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(0, 0, 0, 0.1)',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: '#222',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                      transition: 'all 0.15s ease',
+                      height: '34px'
+                    }}
+                  >
+                    Provider ({selectedOperators.length})
+                    <span style={{ fontSize: '8px', opacity: 0.7 }}>▼</span>
+                  </button>
+
+                  {showProviderDropdown && (
+                    <div className="map-provider-dropdown-card" style={{
+                      position: 'absolute',
+                      top: '40px',
+                      left: 0,
+                      background: '#fff',
+                      border: '1px solid rgba(0, 0, 0, 0.1)',
+                      borderRadius: '10px',
+                      padding: '12px',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                      zIndex: 1000,
+                      minWidth: '220px',
+                      maxWidth: '280px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', color: '#888', letterSpacing: '0.04em' }}>Provider SPKLU</span>
+                        <span style={{ fontSize: '10px', color: '#717171', fontWeight: 500 }}>{selectedOperators.length}/{availableOperators.length}</span>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px', fontSize: '11px', fontWeight: 600, marginBottom: '8px' }}>
+                        <button 
+                          type="button"
+                          onClick={() => setSelectedOperators(availableOperators)}
+                          style={{ background: 'none', border: 'none', padding: 0, color: info.color, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+                        >
+                          Semua
+                        </button>
+                        <span style={{ color: '#ebebeb' }}>|</span>
+                        <button 
+                          type="button"
+                          onClick={() => setSelectedOperators([])}
+                          style={{ background: 'none', border: 'none', padding: 0, color: '#717171', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+                        >
+                          Hapus
+                        </button>
+                      </div>
+
+                      <div className="map-provider-checkbox-list" style={{
+                        maxHeight: '160px',
+                        overflowY: 'auto',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                        padding: '4px 0'
+                      }}>
+                        {availableOperators.length === 0 ? (
+                          <span style={{ fontSize: '11px', color: '#888', fontStyle: 'italic' }}>Tidak ada provider</span>
+                        ) : (
+                          availableOperators.map(op => {
+                            const isChecked = selectedOperators.includes(op);
+                            return (
+                              <label key={op} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#222', cursor: 'pointer', userSelect: 'none' }}>
+                                <input 
+                                  type="checkbox" 
+                                  checked={isChecked}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedOperators(prev => [...prev, op]);
+                                    } else {
+                                      setSelectedOperators(prev => prev.filter(x => x !== op));
+                                    }
+                                  }}
+                                  style={{ accentColor: info.color, cursor: 'pointer' }}
+                                />
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{op}</span>
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Floating Layer Toggle — benar-benar di atas peta, pojok kanan bawah */}
               <div className="map-layer-toggle-panel">
                 <div className="map-layer-toggle-title">Layer</div>
@@ -856,59 +1067,199 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
         </div>
       </div>
 
-      {/* D. Priority Recommendation Cards */}
-      <div className="detail-recommendations">
-        <h3 className="section-subheading">Rekomendasi Lokasi Prioritas</h3>
-        <div className="rec-cards-grid">
-          {relevantWhitespaces.map((ws) => (
-            <div key={ws.id} className="rec-card" style={{ borderTopColor: info.color }}>
-              <div className="rec-card-header">
-                <div>
-                  <h4 className="rec-card-name">{ws.name}</h4>
-                  <div className="rec-card-city">{ws.city}</div>
-                </div>
-                <div className="rec-score-circle">
-                  <svg viewBox="0 0 36 36" className="circular-chart">
-                    <path className="circle-bg"
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    />
-                    <path className="circle"
-                      stroke={info.color}
-                      strokeDasharray={`${ws.scores.overall}, 100`}
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    />
-                    <text x="18" y="20.35" className="percentage">{ws.scores.overall}%</text>
-                  </svg>
-                </div>
-              </div>
-
-              <span className={`recommendation-badge ${getRecommendationBadgeClass(ws.scores.recommendation)}`}>
-                <Award size={11} style={{ marginRight: '3px' }} />
-                {ws.scores.recommendation}
-              </span>
-
-              <div className="rec-metrics">
-                <div className="rec-metric">
-                  <Navigation size={12} style={{ color: '#10b981' }} />
-                  <span className="rec-metric-label">Aksesibilitas</span>
-                  <span className="rec-metric-score">{ws.scores.traffic}/10</span>
-                </div>
-                <div className="rec-metric">
-                  <Building2 size={12} style={{ color: '#f59e0b' }} />
-                  <span className="rec-metric-label">Demand</span>
-                  <span className="rec-metric-score">{ws.scores.poiDensity}/10</span>
-                </div>
-                <div className="rec-metric">
-                  <LayoutGrid size={12} style={{ color: '#ef4444' }} />
-                  <span className="rec-metric-label">Kompetisi</span>
-                  <span className="rec-metric-score">{ws.scores.competition}/10</span>
-                </div>
-              </div>
-
-              <p className="rec-description">{ws.scores.description}</p>
-            </div>
-          ))}
+      {/* D. Recommendations & SPBU Ranking Tabs */}
+      <div className="detail-recommendations" style={{ marginTop: '24px' }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid #ebebeb', marginBottom: '16px', gap: '16px' }}>
+          <button
+            onClick={() => setActiveListTab('whitespace')}
+            className={`list-tab-btn ${activeListTab === 'whitespace' ? 'active' : ''}`}
+            style={{
+              padding: '10px 4px',
+              fontWeight: 600,
+              fontSize: '15px',
+              background: 'none',
+              border: 'none',
+              borderBottom: activeListTab === 'whitespace' ? `2px solid ${info.color}` : '2px solid transparent',
+              color: activeListTab === 'whitespace' ? '#222' : '#717171',
+              cursor: 'pointer',
+              fontFamily: 'Inter, sans-serif'
+            }}
+          >
+            Rekomendasi Whitespace ({relevantWhitespaces.length})
+          </button>
+          <button
+            onClick={() => setActiveListTab('spbu')}
+            className={`list-tab-btn ${activeListTab === 'spbu' ? 'active' : ''}`}
+            style={{
+              padding: '10px 4px',
+              fontWeight: 600,
+              fontSize: '15px',
+              background: 'none',
+              border: 'none',
+              borderBottom: activeListTab === 'spbu' ? `2px solid ${info.color}` : '2px solid transparent',
+              color: activeListTab === 'spbu' ? '#222' : '#717171',
+              cursor: 'pointer',
+              fontFamily: 'Inter, sans-serif'
+            }}
+          >
+            Ranking Kemitraan SPBU ({rankedSpbus.length})
+          </button>
         </div>
+
+        {/* Tab 1: Whitespace Opportunities */}
+        {activeListTab === 'whitespace' && (
+          <div className="rec-cards-grid">
+            {relevantWhitespaces.length === 0 ? (
+              <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '32px', color: '#888', fontStyle: 'italic' }}>
+                Tidak ada peluang whitespace di wilayah ini.
+              </div>
+            ) : (
+              relevantWhitespaces.map((ws) => (
+                <div key={ws.id} className="rec-card" style={{ borderTopColor: info.color }}>
+                  <div className="rec-card-header">
+                    <div>
+                      <h4 className="rec-card-name">{ws.name}</h4>
+                      <div className="rec-card-city">{ws.city}</div>
+                    </div>
+                    <div className="rec-score-circle">
+                      <svg viewBox="0 0 36 36" className="circular-chart">
+                        <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path className="circle" stroke={info.color} strokeDasharray={`${ws.scores.overall}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <text x="18" y="20.35" className="percentage">{ws.scores.overall}%</text>
+                      </svg>
+                    </div>
+                  </div>
+
+                  <span className={`recommendation-badge ${getRecommendationBadgeClass(ws.scores.recommendation)}`}>
+                    <Award size={11} style={{ marginRight: '3px' }} />
+                    {ws.scores.recommendation}
+                  </span>
+
+                  <div className="rec-metrics">
+                    <div className="rec-metric">
+                      <Navigation size={12} style={{ color: '#10b981' }} />
+                      <span className="rec-metric-label">Aksesibilitas</span>
+                      <span className="rec-metric-score">{ws.scores.traffic}/10</span>
+                    </div>
+                    <div className="rec-metric">
+                      <Building2 size={12} style={{ color: '#f59e0b' }} />
+                      <span className="rec-metric-label">Demand</span>
+                      <span className="rec-metric-score">{ws.scores.poiDensity}/10</span>
+                    </div>
+                    <div className="rec-metric">
+                      <LayoutGrid size={12} style={{ color: '#ef4444' }} />
+                      <span className="rec-metric-label">Kompetisi</span>
+                      <span className="rec-metric-score">{ws.scores.competition}/10</span>
+                    </div>
+                  </div>
+
+                  <p className="rec-description">{ws.scores.description}</p>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Tab 2: SPBU Partnership Ranking */}
+        {activeListTab === 'spbu' && (
+          <div className="rec-cards-grid">
+            {rankedSpbus.length === 0 ? (
+              <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '32px', color: '#888', fontStyle: 'italic' }}>
+                Tidak ada SPBU Pertamina terdaftar di wilayah ini.
+              </div>
+            ) : (
+              rankedSpbus.map((spbu, idx) => (
+                <div key={spbu.id} className="rec-card" style={{ borderTopColor: '#22c55e' }}>
+                  <div className="rec-card-header">
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', backgroundColor: '#e2fbeb', color: '#15803d' }}>
+                          Peringkat #{idx + 1}
+                        </span>
+                      </div>
+                      <h4 className="rec-card-name" style={{ marginTop: '6px' }}>{spbu.name}</h4>
+                      <div className="rec-card-city">{spbu.address}</div>
+                    </div>
+                    <div className="rec-score-circle">
+                      <svg viewBox="0 0 36 36" className="circular-chart">
+                        <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path className="circle" stroke="#22c55e" strokeDasharray={`${spbu.scores.overall}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <text x="18" y="20.35" className="percentage">{spbu.scores.overall}%</text>
+                      </svg>
+                    </div>
+                  </div>
+
+                  <span className={`recommendation-badge badge-rec-high`} style={{ backgroundColor: '#e2fbeb', color: '#15803d' }}>
+                    <MapPin size={11} style={{ marginRight: '3px' }} />
+                    Skor Kemitraan SPBU
+                  </span>
+
+                  <div className="rec-metrics">
+                    <div className="rec-metric">
+                      <Navigation size={12} style={{ color: '#10b981' }} />
+                      <span className="rec-metric-label">Aksesibilitas</span>
+                      <span className="rec-metric-score">{spbu.scores.accessibility}/10</span>
+                    </div>
+                    <div className="rec-metric">
+                      <Building2 size={12} style={{ color: '#f59e0b' }} />
+                      <span className="rec-metric-label">Demand</span>
+                      <span className="rec-metric-score">{spbu.scores.demand}/10</span>
+                    </div>
+                    <div className="rec-metric">
+                      <LayoutGrid size={12} style={{ color: '#ef4444' }} />
+                      <span className="rec-metric-label">Celah Pasar</span>
+                      <span className="rec-metric-score">{spbu.scores.competition}/10</span>
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => {
+                        const map = mapInstanceRef.current;
+                        if (map) {
+                          map.flyTo([spbu.lat, spbu.lng], 16, { duration: 1.5 });
+                          L.popup()
+                            .setLatLng([spbu.lat, spbu.lng])
+                            .setContent(`
+                              <div style="font-family:'Inter',sans-serif;font-size:12px;line-height:1.4;min-width:160px;">
+                                <div style="font-weight:700;color:#22c55e">SPBU Pertamina (Mitra)</div>
+                                <div style="font-weight:600;margin-top:2px;">${spbu.name}</div>
+                                <div style="font-size:11px;color:#666;margin-top:2px;">${spbu.address}</div>
+                                <div style="margin-top:6px;border-top:1px solid #ebebeb;padding-top:4px;font-weight:700;">Skor Kelayakan: ${spbu.scores.overall}%</div>
+                              </div>
+                            `)
+                            .openOn(map);
+                          
+                          // Smooth scroll up to the map
+                          const mapContainer = document.querySelector('.map-content-wrapper');
+                          if (mapContainer) {
+                            mapContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          }
+                        }
+                      }}
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        backgroundColor: '#22c55e',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontFamily: 'Inter, sans-serif',
+                        transition: 'background 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#16a34a'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#22c55e'}
+                    >
+                      Fokus Peta
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
