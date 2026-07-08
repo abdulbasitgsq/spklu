@@ -3,7 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Award, Zap, Navigation, Building2, LayoutGrid, MapPin, Clock, User } from 'lucide-react';
 import { chargingTypeInfo, gapDistributions, priorityGrids, categoryKeyMap } from '../data/showcaseData';
-import { whitespacePoints, spatialMismatchData } from '../data/planningData';
+import { whitespacePoints, spatialMismatchData, spbuLocations } from '../data/planningData';
 import { chargersData } from '../data/chargers';
 import { gridCells, CELL_SIZE_DEG, realPriorityGrids } from '../data/realGridData';
 
@@ -67,6 +67,15 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
   useEffect(() => {
     setSelectedOperators(availableOperators);
   }, [availableOperators]);
+
+  // Layer visibility toggles
+  const [layerToggles, setLayerToggles] = useState({
+    demandGrid: true,
+    spkluMarkers: true,
+    spbuMarkers: true,
+    whitespaceCircles: true,
+  });
+  const toggleLayer = (key) => setLayerToggles(prev => ({ ...prev, [key]: !prev[key] }));
 
   // Calculate dynamic overall score for whitespaces and sort by overall score descending
   const calculatedWhitespaces = useMemo(() => {
@@ -174,6 +183,12 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
     return filtered.slice(0, 250);
   }, [provinsi, selectedOperators]);
 
+  // Pertamina/SPBU markers filtered by province
+  const filteredSpbu = useMemo(() => {
+    if (!provinsi) return spbuLocations;
+    return spbuLocations.filter(s => (s.provinsi || '').trim() === provinsi);
+  }, [provinsi]);
+
   // Hook 1: Initialize Leaflet map instance once on mount, clean up on unmount
   useEffect(() => {
     if (!mapRef.current) return;
@@ -233,7 +248,7 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
 
     const shouldRenderGrid = !provinsi || provinsi === 'DKI Jakarta';
 
-    if (shouldRenderGrid) {
+    if (shouldRenderGrid && layerToggles.demandGrid) {
       gridCells.forEach(cell => {
         const poiCount = cell[poiKey] || 0;
         const supplyCount = cell[supplyKey] || 0;
@@ -272,22 +287,18 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
 
         let fillColor, fillOpacity, strokeColor, strokeWeight;
         if (isSupplyCell) {
-          // Blue: existing supply area
           fillColor = '#4c72b0';
           fillOpacity = 0.2 + Math.min(supplyCount / 15, 0.4);
           strokeColor = '#4c72b0';
           strokeWeight = 0.3;
         } else if (dynamicGapScore > 0) {
-          // Red gradient: scale opacity based on dynamic score relative to default seed fill_color
           const [r, g, b, a] = cell.fill_color || [239, 68, 68, 60];
           fillColor = `rgb(${r},${g},${b})`;
-          // Map dynamic Gap Score to adjust original alpha
-          const scaleFactor = dGapScore / 5; // 5 is midpoint
+          const scaleFactor = dGapScore / 5;
           fillOpacity = Math.max(0.04, Math.min(0.85, (a / 255) * scaleFactor));
           strokeColor = `rgb(${r},${g},${b})`;
           strokeWeight = 0.3;
         } else {
-          // Low activity cell
           fillColor = '#c44e52';
           fillOpacity = 0.04;
           strokeColor = '#c44e52';
@@ -302,18 +313,19 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
           interactive: true
         }).addTo(map);
 
-        // Sticky tooltip showing real dynamic grid metadata
+        // BUG FIX: sticky:false prevents multiple ghost tooltips from showing simultaneously
         rect.bindTooltip(`
           <div style="font-family:'Inter',sans-serif;font-size:11px;line-height:1.6;white-space:nowrap;">
             <div><b>Grid ID:</b> ${cell.gid}</div>
             <div><b>Aksesibilitas:</b> ${trafficScore.toFixed(1)}/10</div>
             <div><b>Demand (POI):</b> ${poiCount} (Skor: ${poiDensityScore.toFixed(1)}/10)</div>
-            <div><b>Kompetisi (Supply):</b> ${supplyCount} (Skor: ${competitionScore.toFixed(1)}/10)</div>
+            <div><b>Supply (Kompetisi):</b> ${supplyCount} (Skor: ${competitionScore.toFixed(1)}/10)</div>
             <div><b>Kapasitas Grid PLN:</b> ${plnGridScore.toFixed(1)}/10</div>
             <div style="border-top:1px solid #ebebeb;margin-top:4px;padding-top:4px;"><b>Dynamic Gap Score:</b> ${dynamicGapScore.toFixed(1)}</div>
           </div>
         `, {
-          sticky: true,
+          sticky: false,
+          direction: 'top',
           opacity: 0.97,
           className: 'grid-cell-tooltip'
         });
@@ -331,7 +343,6 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
               }
             });
 
-            // Distance threshold: 0.025 degrees (~2.7km)
             const DISTANCE_THRESHOLD = 0.025;
             const actualDist = Math.sqrt(minDist);
 
@@ -350,7 +361,6 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
                 }
               });
             } else {
-              // Show coordinate-aligned popup description
               L.popup()
                 .setLatLng([cell.lat, cell.lng])
                 .setContent(`
@@ -374,60 +384,78 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
       });
     }
 
-    // Add SPKLU helper markers (small dots)
-    helperChargers.forEach(charger => {
-      if (!charger.lat || !charger.lng) return;
-      const marker = L.circleMarker([charger.lat, charger.lng], {
-        radius: 3,
-        fillColor: '#fbbf24',
-        color: '#b45309',
-        weight: 1,
-        fillOpacity: 0.7,
-      }).addTo(map);
-      marker.bindTooltip(charger.name || 'SPKLU', { direction: 'top' });
-      layersRef.current.push(marker);
-    });
+    // Add SPKLU helper markers (small orange dots) — guarded by layer toggle
+    if (layerToggles.spkluMarkers) {
+      helperChargers.forEach(charger => {
+        if (!charger.lat || !charger.lng) return;
+        const marker = L.circleMarker([charger.lat, charger.lng], {
+          radius: 3,
+          fillColor: '#fbbf24',
+          color: '#b45309',
+          weight: 1,
+          fillOpacity: 0.7,
+        }).addTo(map);
+        marker.bindTooltip(charger.name || 'SPKLU', { direction: 'top', sticky: false });
+        layersRef.current.push(marker);
+      });
+    }
 
-    // Add whitespace points for this type
-    relevantWhitespaces.forEach(ws => {
-      // Radius circle
-      const circle = L.circle([ws.lat, ws.lng], {
-        radius: ws.radius,
-        fillColor: info.color,
-        color: info.color,
-        fillOpacity: 0.15,
-        weight: 1.5,
-        dashArray: '6 3',
-      }).addTo(map);
+    // Add Pertamina/SPBU markers (green diamonds) — guarded by layer toggle
+    if (layerToggles.spbuMarkers) {
+      filteredSpbu.forEach(spbu => {
+        if (!spbu.lat || !spbu.lng) return;
+        const marker = L.circleMarker([spbu.lat, spbu.lng], {
+          radius: 5,
+          fillColor: '#22c55e',
+          color: '#15803d',
+          weight: 1.5,
+          fillOpacity: 0.85,
+        }).addTo(map);
+        marker.bindTooltip(`<b>${spbu.name}</b>`, { direction: 'top', sticky: false });
+        layersRef.current.push(marker);
+      });
+    }
 
-      // Center marker
-      const centerMarker = L.circleMarker([ws.lat, ws.lng], {
-        radius: 6,
-        fillColor: info.color,
-        color: '#fff',
-        weight: 2,
-        fillOpacity: 1,
-      }).addTo(map);
+    // Add whitespace opportunity circles — guarded by layer toggle
+    if (layerToggles.whitespaceCircles) {
+      relevantWhitespaces.forEach(ws => {
+        const circle = L.circle([ws.lat, ws.lng], {
+          radius: ws.radius,
+          fillColor: info.color,
+          color: info.color,
+          fillOpacity: 0.15,
+          weight: 1.5,
+          dashArray: '6 3',
+        }).addTo(map);
 
-      const popupContent = `
-        <div style="font-family:Inter,sans-serif;min-width:200px">
-          <div style="font-weight:600;font-size:14px;margin-bottom:4px">${ws.name}</div>
-          <div style="font-size:12px;color:#666;margin-bottom:8px">${ws.city}</div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:#f9f9f9;border-radius:8px">
-            <div>
-              <div style="font-size:11px;color:#888">Skor Kelayakan</div>
-              <div style="font-size:20px;font-weight:700;color:${info.color}">${ws.scores.overall}%</div>
+        const centerMarker = L.circleMarker([ws.lat, ws.lng], {
+          radius: 6,
+          fillColor: info.color,
+          color: '#fff',
+          weight: 2,
+          fillOpacity: 1,
+        }).addTo(map);
+
+        const popupContent = `
+          <div style="font-family:Inter,sans-serif;min-width:200px">
+            <div style="font-weight:600;font-size:14px;margin-bottom:4px">${ws.name}</div>
+            <div style="font-size:12px;color:#666;margin-bottom:8px">${ws.city}</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:#f9f9f9;border-radius:8px">
+              <div>
+                <div style="font-size:11px;color:#888">Skor Kelayakan</div>
+                <div style="font-size:20px;font-weight:700;color:${info.color}">${ws.scores.overall}%</div>
+              </div>
+              <div style="padding:4px 8px;border-radius:9999px;font-size:11px;font-weight:600;background:${ws.scores.recommendation.includes('SANGAT') ? '#dcfce7' : '#fef3c7'};color:${ws.scores.recommendation.includes('SANGAT') ? '#166534' : '#92400e'}">${ws.scores.recommendation}</div>
             </div>
-            <div style="padding:4px 8px;border-radius:9999px;font-size:11px;font-weight:600;background:${ws.scores.recommendation.includes('SANGAT') ? '#dcfce7' : '#fef3c7'};color:${ws.scores.recommendation.includes('SANGAT') ? '#166534' : '#92400e'}">${ws.scores.recommendation}</div>
           </div>
-        </div>
-      `;
-      centerMarker.bindPopup(popupContent, { maxWidth: 280 });
+        `;
+        centerMarker.bindPopup(popupContent, { maxWidth: 280 });
 
-      layersRef.current.push(circle, centerMarker);
-    });
+        layersRef.current.push(circle, centerMarker);
+      });
+    }
 
-  }, [type, provinsi, helperChargers, relevantWhitespaces, info.color, weights]);
+  }, [type, provinsi, helperChargers, filteredSpbu, relevantWhitespaces, info.color, weights, layerToggles]);
 
   const getRecommendationBadgeClass = (rec) => {
     if (rec.includes('SANGAT')) return 'badge-rec-high';
@@ -766,6 +794,33 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
                 })}
               </div>
             </div>
+
+            {/* Layer Toggle Panel */}
+            <div className="presets-container">
+              <h5 className="presets-title">Tampilkan Layer</h5>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {[
+                  { key: 'demandGrid', label: 'Demand Grid (Heatmap)', color: '#ef4444' },
+                  { key: 'spkluMarkers', label: 'SPKLU Markers', color: '#fbbf24' },
+                  { key: 'spbuMarkers', label: 'SPBU / Pertamina', color: '#22c55e' },
+                  { key: 'whitespaceCircles', label: 'Whitespace Circles', color: info.color },
+                ].map(({ key, label, color }) => (
+                  <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={layerToggles[key]}
+                      onChange={() => toggleLayer(key)}
+                      style={{ accentColor: color, cursor: 'pointer' }}
+                    />
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#222', fontFamily: 'Inter, sans-serif' }}>
+                      <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />
+                      {label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
           </div>
 
           {/* Map Container */}
@@ -791,6 +846,10 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
           <div className="legend-item">
             <span className="legend-dot" style={{ background: '#fbbf24', border: '1px solid #b45309' }} />
             <span>Existing SPKLU</span>
+          </div>
+          <div className="legend-item">
+            <span className="legend-dot" style={{ background: '#22c55e', border: '1px solid #15803d' }} />
+            <span>SPBU / Pertamina</span>
           </div>
           <div className="legend-item">
             <span className="legend-dot" style={{ background: info.color, border: '2px solid #fff', boxShadow: '0 0 0 1px ' + info.color }} />
