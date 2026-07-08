@@ -9,6 +9,7 @@ import { gridCells, CELL_SIZE_DEG, realPriorityGrids } from '../data/realGridDat
 
 // Province centers for map view
 const PROVINCE_CENTERS = {
+  '': { lat: -7.5, lng: 110.5, zoom: 7 }, // Semua Provinsi (Java & Bali)
   'DKI Jakarta': { lat: -6.22, lng: 106.83, zoom: 12 },
   'Jawa Barat': { lat: -6.90, lng: 107.60, zoom: 13 },
   'Bali': { lat: -8.70, lng: 115.17, zoom: 13 },
@@ -300,13 +301,13 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
 
 
 
+  const prevProvinsiRef = useRef(provinsi);
+
   // Hook 1: Initialize Leaflet map instance once on mount, clean up on unmount
   useEffect(() => {
     if (!mapRef.current) return;
 
-    const center = provinsi && PROVINCE_CENTERS[provinsi]
-      ? PROVINCE_CENTERS[provinsi]
-      : { lat: -6.22, lng: 106.83, zoom: 12 };
+    const center = PROVINCE_CENTERS[provinsi || ''] || PROVINCE_CENTERS[''];
 
     const map = L.map(mapRef.current, {
       center: [center.lat, center.lng],
@@ -333,6 +334,17 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
       lastViewRef.current = { type: null, provinsi: null };
     };
   }, []); // Only run once on mount
+
+  // Sync map center only when selected province changes
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    if (prevProvinsiRef.current !== provinsi) {
+      const center = PROVINCE_CENTERS[provinsi || ''] || PROVINCE_CENTERS[''];
+      map.setView([center.lat, center.lng], center.zoom);
+      prevProvinsiRef.current = provinsi;
+    }
+  }, [provinsi]);
 
   // Hook 2: Dynamic layers updates (runs when filters, weights, type, or helpers change)
   useEffect(() => {
