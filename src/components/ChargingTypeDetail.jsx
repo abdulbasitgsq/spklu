@@ -70,10 +70,10 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
 
   // Layer visibility toggles
   const [layerToggles, setLayerToggles] = useState({
-    demandGrid: true,
+    whitespace: true,       // grid sel merah/biru = analisis whitespace utama
     spkluMarkers: true,
     spbuMarkers: true,
-    whitespaceCircles: true,
+    opportunityMarkers: true, // lingkaran + titik whitespace opportunity
   });
   const toggleLayer = (key) => setLayerToggles(prev => ({ ...prev, [key]: !prev[key] }));
 
@@ -248,7 +248,7 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
 
     const shouldRenderGrid = !provinsi || provinsi === 'DKI Jakarta';
 
-    if (shouldRenderGrid && layerToggles.demandGrid) {
+    if (shouldRenderGrid && layerToggles.whitespace) {
       gridCells.forEach(cell => {
         const poiCount = cell[poiKey] || 0;
         const supplyCount = cell[supplyKey] || 0;
@@ -417,7 +417,7 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
     }
 
     // Add whitespace opportunity circles — guarded by layer toggle
-    if (layerToggles.whitespaceCircles) {
+    if (layerToggles.opportunityMarkers) {
       relevantWhitespaces.forEach(ws => {
         const circle = L.circle([ws.lat, ws.lng], {
           radius: ws.radius,
@@ -795,37 +795,35 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
               </div>
             </div>
 
-            {/* Layer Toggle Panel */}
-            <div className="presets-container">
-              <h5 className="presets-title">Tampilkan Layer</h5>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          </div>
+
+          {/* Map Container — inner wrapper menjadi relative anchor untuk floating panel */}
+          <div className="map-content-wrapper">
+            <div className="map-inner-wrap">
+              <div className="map-container" ref={mapRef} />
+
+              {/* Floating Layer Toggle — benar-benar di atas peta, pojok kanan bawah */}
+              <div className="map-layer-toggle-panel">
+                <div className="map-layer-toggle-title">Layer</div>
                 {[
-                  { key: 'demandGrid', label: 'Demand Grid (Heatmap)', color: '#ef4444' },
-                  { key: 'spkluMarkers', label: 'SPKLU Markers', color: '#fbbf24' },
+                  { key: 'whitespace', label: 'Whitespace', color: '#ef4444' },
+                  { key: 'spkluMarkers', label: 'SPKLU', color: '#fbbf24' },
                   { key: 'spbuMarkers', label: 'SPBU / Pertamina', color: '#22c55e' },
-                  { key: 'whitespaceCircles', label: 'Whitespace Circles', color: info.color },
+                  { key: 'opportunityMarkers', label: 'Opportunity Markers', color: info.color },
                 ].map(({ key, label, color }) => (
-                  <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}>
+                  <label key={key} className="map-layer-toggle-row">
                     <input
                       type="checkbox"
                       checked={layerToggles[key]}
                       onChange={() => toggleLayer(key)}
-                      style={{ accentColor: color, cursor: 'pointer' }}
+                      style={{ accentColor: color, cursor: 'pointer', flexShrink: 0 }}
                     />
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#222', fontFamily: 'Inter, sans-serif' }}>
-                      <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />
-                      {label}
-                    </span>
+                    <span className="map-layer-toggle-dot" style={{ background: color }} />
+                    <span className="map-layer-toggle-label">{label}</span>
                   </label>
                 ))}
               </div>
             </div>
-
-          </div>
-
-          {/* Map Container */}
-          <div className="map-content-wrapper">
-            <div className="map-container" ref={mapRef} />
           </div>
         </div>
 
