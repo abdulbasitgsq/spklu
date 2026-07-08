@@ -5,7 +5,7 @@ import SupplyOverview from './components/SupplyOverview';
 import ChargingTypeTabs from './components/ChargingTypeTabs';
 import ChargingTypeDetail from './components/ChargingTypeDetail';
 
-const PROVINCE_OPTIONS = ['DKI Jakarta', 'Jawa Barat', 'Bali'];
+const PROVINCE_OPTIONS = ['DKI Jakarta', 'Jawa Barat', 'Bali', 'Jawa Timur'];
 
 export default function App() {
   const [activeChargingType, setActiveChargingType] = useState('slow');

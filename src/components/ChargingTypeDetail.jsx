@@ -13,6 +13,7 @@ const PROVINCE_CENTERS = {
   'DKI Jakarta': { lat: -6.22, lng: 106.83, zoom: 12 },
   'Jawa Barat': { lat: -6.90, lng: 107.60, zoom: 13 },
   'Bali': { lat: -8.70, lng: 115.17, zoom: 13 },
+  'Jawa Timur': { lat: -7.25, lng: 112.75, zoom: 12 },
 };
 
 // Deterministic pseudo-random based on grid position (no randomness on re-renders)
@@ -177,7 +178,8 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
       const provMatch = !provinsi || 
         (provinsi === 'DKI Jakarta' && a.name.toLowerCase().includes('jakarta')) ||
         (provinsi === 'Jawa Barat' && a.name.toLowerCase().includes('bandung')) ||
-        (provinsi === 'Bali' && a.name.toLowerCase().includes('bali'));
+        (provinsi === 'Bali' && a.name.toLowerCase().includes('bali')) ||
+        (provinsi === 'Jawa Timur' && (a.name.toLowerCase().includes('surabaya') || a.name.toLowerCase().includes('timur')));
         
       if (provMatch) {
         items.push({
@@ -718,6 +720,7 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
                   <option value="DKI Jakarta">DKI Jakarta</option>
                   <option value="Jawa Barat">Jawa Barat</option>
                   <option value="Bali">Bali</option>
+                  <option value="Jawa Timur">Jawa Timur</option>
                 </select>
               </div>
 
