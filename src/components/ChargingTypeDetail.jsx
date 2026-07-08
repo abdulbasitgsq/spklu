@@ -50,6 +50,13 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
     competition: 5
   });
 
+  // Unique provinces list extracted dynamically from chargers data
+  const uniqueProvinces = useMemo(() => {
+    return Array.from(
+      new Set(chargersData.map(c => (c.provinsi || '').trim()))
+    ).filter(Boolean).sort();
+  }, []);
+
   // Get all unique operators for the selected province to display in the sidebar checklist
   const availableOperators = useMemo(() => {
     const ops = new Set();
@@ -107,14 +114,14 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
         const accessibility = 7 + (seed % 4); // 7-10
         const demand = 5 + ((seed * 3) % 6); // 5-10
         const competition = 4 + ((seed * 7) % 7); // 4-10
-        
+
         const wSum = weights.accessibility + weights.demand + weights.competition;
         const overall = wSum > 0 ? Math.round((
           weights.accessibility * accessibility +
           weights.demand * demand +
           weights.competition * competition
         ) / wSum * 10) : 70; // 0-100 score
-        
+
         return {
           ...s,
           scores: { accessibility, demand, competition, overall }
@@ -125,12 +132,12 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
 
   // Get filtered SPKLU chargers for the selected province & selected operators as helper markers
   const helperChargers = useMemo(() => {
-    let filtered = provinsi 
+    let filtered = provinsi
       ? chargersData.filter(c => (c.provinsi || '').trim() === provinsi)
       : chargersData;
 
     filtered = filtered.filter(c => c.operator && selectedOperators.includes(c.operator.trim()));
-    
+
     // Slice to prevent map lag under high marker count (e.g. Semua Provinsi)
     return filtered.slice(0, 250);
   }, [provinsi, selectedOperators]);
@@ -144,7 +151,7 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
   // Combine SPKLU, SPBU, and searchable addresses into searchable list
   const allSearchableItems = useMemo(() => {
     const items = [];
-    
+
     // 1. SPBU Locations
     spbuLocations
       .filter(s => !provinsi || s.provinsi === provinsi)
@@ -159,7 +166,7 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
           badgeColor: '#22c55e'
         });
       });
-      
+
     // 2. SPKLU Locations
     helperChargers.forEach(c => {
       items.push({
@@ -172,15 +179,15 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
         badgeColor: '#fbbf24'
       });
     });
-    
+
     // 3. General Addresses / Landmarks
     searchableAddresses.forEach(a => {
-      const provMatch = !provinsi || 
+      const provMatch = !provinsi ||
         (provinsi === 'DKI Jakarta' && a.name.toLowerCase().includes('jakarta')) ||
         (provinsi === 'Jawa Barat' && a.name.toLowerCase().includes('bandung')) ||
         (provinsi === 'Bali' && a.name.toLowerCase().includes('bali')) ||
         (provinsi === 'Jawa Timur' && (a.name.toLowerCase().includes('surabaya') || a.name.toLowerCase().includes('timur')));
-        
+
       if (provMatch) {
         items.push({
           id: a.name,
@@ -193,15 +200,15 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
         });
       }
     });
-    
+
     return items;
   }, [provinsi, helperChargers]);
 
   const filteredSuggestions = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase();
-    return allSearchableItems.filter(item => 
-      item.name.toLowerCase().includes(query) || 
+    return allSearchableItems.filter(item =>
+      item.name.toLowerCase().includes(query) ||
       item.address.toLowerCase().includes(query) ||
       item.type.toLowerCase().includes(query)
     ).slice(0, 5);
@@ -221,8 +228,8 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
       if (wSum > 0) {
         overall = Math.round(
           (weights.accessibility * ws.scores.traffic +
-           weights.demand * ws.scores.poiDensity +
-           weights.competition * ws.scores.competition) / wSum * 10
+            weights.demand * ws.scores.poiDensity +
+            weights.competition * ws.scores.competition) / wSum * 10
         );
       }
 
@@ -265,7 +272,7 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
 
       const poiDensityScore = (poiCount / maxP) * 10;
       const competitionScore = Math.max(0, 10 - supplyCount * 2);
-      
+
       // Deterministic but realistic traffic score based on cell location
       const cellLat = cell.lat || -6.2;
       const cellLng = cell.lng || 106.8;
@@ -342,9 +349,35 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
     const map = mapInstanceRef.current;
     if (!map) return;
     if (prevProvinsiRef.current !== provinsi) {
-      const center = PROVINCE_CENTERS[provinsi || ''] || PROVINCE_CENTERS[''];
-      map.setView([center.lat, center.lng], center.zoom);
       prevProvinsiRef.current = provinsi;
+
+      // 1. Check if we have customized center coordinates
+      if (provinsi && PROVINCE_CENTERS[provinsi]) {
+        const center = PROVINCE_CENTERS[provinsi];
+        map.setView([center.lat, center.lng], center.zoom);
+        return;
+      }
+
+      // 2. If Semual Provinsi, use national zoom
+      if (!provinsi) {
+        const center = PROVINCE_CENTERS[''];
+        map.setView([center.lat, center.lng], center.zoom);
+        return;
+      }
+
+      // 3. Dynamic fitBounds to all chargers in the selected province
+      const provinceChargers = chargersData.filter(
+        c => (c.provinsi || '').trim() === provinsi && c.lat && c.lng
+      );
+
+      if (provinceChargers.length > 0) {
+        const bounds = L.latLngBounds(provinceChargers.map(c => [c.lat, c.lng]));
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
+      } else {
+        // Fallback to national zoom if no markers exist in province
+        const center = PROVINCE_CENTERS[''];
+        map.setView([center.lat, center.lng], center.zoom);
+      }
     }
   }, [provinsi]);
 
@@ -390,7 +423,7 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
         // Sub-scores calculation for dynamic selection
         const poiDensityScore = (poiCount / maxP) * 10;
         const competitionScore = Math.max(0, 10 - supplyCount * 2);
-        
+
         // Deterministic but realistic traffic and PLN scores based on cell location
         const cellLat = cell.lat || -6.2;
         const cellLng = cell.lng || 106.8;
@@ -631,7 +664,7 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
           <div className="chart-card">
             <h3 className="chart-title">The Opportunity Tail</h3>
             <p className="chart-subtitle">
-              The vast majority of the city has low demand. We target the extreme right tail: 
+              The vast majority of the city has low demand. We target the extreme right tail:
               the highly underserved micro-economies.
             </p>
             <div className="histogram">
@@ -710,17 +743,16 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
             <div className="sidebar-group-card" style={{ marginBottom: '10px' }}>
               <div className="sidebar-control-group">
                 <span className="control-label" style={{ fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#717171', marginBottom: '6px', display: 'block' }}>Region</span>
-                <select 
-                  className="map-select" 
-                  value={provinsi || ''} 
+                <select
+                  className="map-select"
+                  value={provinsi || ''}
                   onChange={(e) => onChangeProvinsi && onChangeProvinsi(e.target.value)}
                   style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #ebebeb', fontSize: '14px', fontFamily: 'Inter, sans-serif', color: '#222', background: '#fff' }}
                 >
                   <option value="">Semua Provinsi</option>
-                  <option value="DKI Jakarta">DKI Jakarta</option>
-                  <option value="Jawa Barat">Jawa Barat</option>
-                  <option value="Bali">Bali</option>
-                  <option value="Jawa Timur">Jawa Timur</option>
+                  {uniqueProvinces.map(prov => (
+                    <option key={prov} value={prov}>{prov}</option>
+                  ))}
                 </select>
               </div>
 
@@ -772,11 +804,11 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
                   </span>
                   <span className="criteria-value">{weights.accessibility}.0</span>
                 </div>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="10" 
-                  value={weights.accessibility} 
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  value={weights.accessibility}
                   onChange={(e) => setWeights(prev => ({ ...prev, accessibility: parseInt(e.target.value, 10) }))}
                   className="criteria-slider"
                   style={{ '--type-color': info.color }}
@@ -793,11 +825,11 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
                   </span>
                   <span className="criteria-value">{weights.demand}.0</span>
                 </div>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="10" 
-                  value={weights.demand} 
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  value={weights.demand}
                   onChange={(e) => setWeights(prev => ({ ...prev, demand: parseInt(e.target.value, 10) }))}
                   className="criteria-slider"
                   style={{ '--type-color': info.color }}
@@ -814,11 +846,11 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
                   </span>
                   <span className="criteria-value">{weights.competition}.0</span>
                 </div>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="10" 
-                  value={weights.competition} 
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  value={weights.competition}
                   onChange={(e) => setWeights(prev => ({ ...prev, competition: parseInt(e.target.value, 10) }))}
                   className="criteria-slider"
                   style={{ '--type-color': info.color }}
@@ -838,8 +870,8 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
                   { id: 'avoid-comp', label: 'Fokus Celah Pasar', w: { accessibility: 5, demand: 5, competition: 10 } }
                 ].map(preset => {
                   const isActive = weights.accessibility === preset.w.accessibility &&
-                                   weights.demand === preset.w.demand &&
-                                   weights.competition === preset.w.competition;
+                    weights.demand === preset.w.demand &&
+                    weights.competition === preset.w.competition;
                   return (
                     <button
                       key={preset.id}
@@ -879,7 +911,7 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
                       className="map-search-input"
                     />
                     {searchQuery && (
-                      <button 
+                      <button
                         onClick={() => setSearchQuery('')}
                         className="map-search-clear"
                       >
@@ -975,7 +1007,7 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
                       </div>
 
                       <div style={{ display: 'flex', gap: '8px', fontSize: '11px', fontWeight: 600, marginBottom: '8px' }}>
-                        <button 
+                        <button
                           type="button"
                           onClick={() => setSelectedOperators(availableOperators)}
                           style={{ background: 'none', border: 'none', padding: 0, color: info.color, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
@@ -983,7 +1015,7 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
                           Semua
                         </button>
                         <span style={{ color: '#ebebeb' }}>|</span>
-                        <button 
+                        <button
                           type="button"
                           onClick={() => setSelectedOperators([])}
                           style={{ background: 'none', border: 'none', padding: 0, color: '#717171', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
@@ -1007,8 +1039,8 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
                             const isChecked = selectedOperators.includes(op);
                             return (
                               <label key={op} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#222', cursor: 'pointer', userSelect: 'none' }}>
-                                <input 
-                                  type="checkbox" 
+                                <input
+                                  type="checkbox"
                                   checked={isChecked}
                                   onChange={(e) => {
                                     if (e.target.checked) {
@@ -1246,7 +1278,7 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
                               </div>
                             `)
                             .openOn(map);
-                          
+
                           // Smooth scroll up to the map
                           const mapContainer = document.querySelector('.map-content-wrapper');
                           if (mapContainer) {

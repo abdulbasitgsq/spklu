@@ -5,7 +5,11 @@ import SupplyOverview from './components/SupplyOverview';
 import ChargingTypeTabs from './components/ChargingTypeTabs';
 import ChargingTypeDetail from './components/ChargingTypeDetail';
 
-const PROVINCE_OPTIONS = ['DKI Jakarta', 'Jawa Barat', 'Bali', 'Jawa Timur'];
+import { chargersData } from './data/chargers';
+
+const PROVINCE_OPTIONS = Array.from(
+  new Set(chargersData.map(c => (c.provinsi || '').trim()))
+).filter(Boolean).sort();
 
 export default function App() {
   const [activeChargingType, setActiveChargingType] = useState('slow');
