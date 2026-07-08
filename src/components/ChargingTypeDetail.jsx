@@ -121,6 +121,24 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
       .sort((a, b) => b.scores.overall - a.scores.overall);
   }, [provinsi, weights]);
 
+  // Get filtered SPKLU chargers for the selected province & selected operators as helper markers
+  const helperChargers = useMemo(() => {
+    let filtered = provinsi 
+      ? chargersData.filter(c => (c.provinsi || '').trim() === provinsi)
+      : chargersData;
+
+    filtered = filtered.filter(c => c.operator && selectedOperators.includes(c.operator.trim()));
+    
+    // Slice to prevent map lag under high marker count (e.g. Semua Provinsi)
+    return filtered.slice(0, 250);
+  }, [provinsi, selectedOperators]);
+
+  // Pertamina/SPBU markers filtered by province
+  const filteredSpbu = useMemo(() => {
+    if (!provinsi) return spbuLocations;
+    return spbuLocations.filter(s => (s.provinsi || '').trim() === provinsi);
+  }, [provinsi]);
+
   // Combine SPKLU, SPBU, and searchable addresses into searchable list
   const allSearchableItems = useMemo(() => {
     const items = [];
@@ -280,23 +298,7 @@ export default function ChargingTypeDetail({ type, provinsi, onChangeType, onCha
   // Max histogram count for scaling
   const maxCount = Math.max(...distribution.counts);
 
-  // Get filtered SPKLU chargers for the selected province & selected operators as helper markers
-  const helperChargers = useMemo(() => {
-    let filtered = provinsi 
-      ? chargersData.filter(c => (c.provinsi || '').trim() === provinsi)
-      : chargersData;
 
-    filtered = filtered.filter(c => c.operator && selectedOperators.includes(c.operator.trim()));
-    
-    // Slice to prevent map lag under high marker count (e.g. Semua Provinsi)
-    return filtered.slice(0, 250);
-  }, [provinsi, selectedOperators]);
-
-  // Pertamina/SPBU markers filtered by province
-  const filteredSpbu = useMemo(() => {
-    if (!provinsi) return spbuLocations;
-    return spbuLocations.filter(s => (s.provinsi || '').trim() === provinsi);
-  }, [provinsi]);
 
   // Hook 1: Initialize Leaflet map instance once on mount, clean up on unmount
   useEffect(() => {
